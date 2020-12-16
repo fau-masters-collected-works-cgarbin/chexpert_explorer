@@ -1,0 +1,13 @@
+# Files and directories from the dataset
+# We are not allowed to redistribute them
+# Download from https://stanfordmlgroup.github.io/competitions/chexpert/
+CheXpert-v*.zip
+CheXpert-v*
+CheXpert-v*/
+
+# Common names for Python environments
+env
+venv
+
+# Files we create, but shouldn't be committed
+*.csv
