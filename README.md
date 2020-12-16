@@ -6,9 +6,9 @@ A preprocessor and visualizer for [CheXPert](https://stanfordmlgroup.github.io/c
   (Excel, Google Sheets, etc.).
 - Visualizer: explores the images in the dataset.
 
-Why do we need
-
 ## Preparing to use the tools
+
+### Download the dataset
 
 The license terms for CheXPert does not allow redistribution (understandably). Before using the
 preprocessor and the visualizer, you need to download your own copy of the dataset and uncompress
@@ -32,6 +32,10 @@ Once you are done you should have a directory strcuture that looks like this:
        |- valid
        |  |- patientXXXX (several directories)
 ```
+
+### Prepare the Python environment
+
+TBD
 
 ## Preprocessing
 
