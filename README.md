@@ -8,36 +8,10 @@ A preprocessor and visualizer for [CheXPert](https://stanfordmlgroup.github.io/c
 
 ## Preparing to use the tools
 
-### Download the dataset
+If this is the first time you are using the preprocessor and the visualizer, follow
+[the setup instructions](./setup.md) to prepare the environment.
 
-The license terms for CheXPert does not allow redistribution (understandably). Before using the
-preprocessor and the visualizer, you need to download your own copy of the dataset and uncompress
-it into this project's folder.
-
-1. Go to the [CheXPert page](https://stanfordmlgroup.github.io/competitions/chexpert/) and request
-   the dataset (scroll to the bottom of that page).
-1. Download the .zip file and uncompress it inside the main directory of this project.
-
-Once you are done you should have a directory strcuture that looks like this:
-
-```text
-   This project's main directory
-    |- README.md (this file)
-    |- ... other project files and folders
-    +- CheXpert-v1.0-small
-       |- train.csv
-       |- valid.csv
-       |- train
-       |  |- patientXXXX (several directories)
-       |- valid
-       |  |- patientXXXX (several directories)
-```
-
-### Prepare the Python environment
-
-TBD
-
-## Preprocessing
+## Preprocessing the dataset
 
 Why do we need to preprocess the dataset? The dataset description is delivered as two files, one for
 the training (train.csv) and one for the validation set (valid.csv). They also have slightly
@@ -53,6 +27,6 @@ the original dataset files, the combined file has:
 - One column to indicate if the image is from the training or validation set.
 - Labels normalized to integers.
 
-## Visualizing
+## Visualizing the dataset
 
 TBD
