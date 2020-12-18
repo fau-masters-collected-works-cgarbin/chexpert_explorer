@@ -11,3 +11,5 @@ venv
 
 # Files we create, but shouldn't be committed
 *.csv
+
+__pycache__
