@@ -67,6 +67,11 @@ def _augment_chexpert() -> pd.DataFrame:
 
     df = pd.concat(pd.read_csv(os.path.join(chexpert_dir, f)) for f in ['train.csv', 'valid.csv'])
 
+    # Normalize the labels: replace empty ones with zero, make all of them integers
+    df.fillna(0, inplace=True)
+    for c in df.columns[5:]:
+        df[c] = df[c].astype('int32')
+
     # Add the patient ID column by extracting it from the filename
     # Assume that the 'Path' column follows a well-defined format and extract from "patientNNNNN"
     df[COL_PATIENT_ID] = df.Path.apply(lambda x: int(x.split('/')[2][7:]))
