@@ -6,8 +6,8 @@ combined CSV appends the following columns to the existing dataset columns:
 - Patient number
 - Study number
 - View number
-- "Train" or "Test" image
 - Age group (MeSH age group - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1794003/)
+- "Train" or "Test" image
 
 It also normalizes the labels to 0, 1, and -1 by converting floating point labels to integer (e.g.
 0.0 to 0) and by filling in empty label columns with 0.
@@ -25,6 +25,7 @@ import pandas as pd
 COL_PATIENT_ID = 'Patient ID'
 COL_STUDY_NUMBER = 'Study Number'
 COL_VIEW_NUMBER = 'View Number'
+COL_AGE_GROUP = 'Age Group'
 COL_TRAIN_TEST = 'Train/Test'
 
 # Values of columns
@@ -76,6 +77,15 @@ def _augment_chexpert() -> pd.DataFrame:
     # Add the view number column, also assuming that the 'Path' column is well-defined
     view_regex = re.compile('/|_')
     df[COL_VIEW_NUMBER] = df.Path.apply(lambda x: int(re.split(view_regex, x)[4][4:]))
+
+    # Add the MeSH age group column
+    # Best reference I found for MeSH groups: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1794003/
+    # We have only complete years, so we can't use 'newborn'
+    # Also prefix with zero because visualizers sort by ASCII code, not numeric value
+    bins = [0, 2, 6, 13, 19, 45, 65, 80, 120]
+    ages = ['(0-1) Infant', '(02-5) Preschool', '(06-12) Child', '(13-18) Adolescent',
+            '(19-44) Adult', '(45-64) Middle age', '(65-79) Aged', '(80+) Aged 80']
+    df[COL_AGE_GROUP] = pd.cut(df.Age, bins=bins, labels=ages, right=False)
 
     # Add the train/test column
     df[COL_TRAIN_TEST] = df.Path.apply(lambda x: TRAIN if 'train' in x else TEST)
