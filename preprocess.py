@@ -23,6 +23,8 @@ import pandas as pd
 
 # Names of the columns added with this code
 COL_PATIENT_ID = 'Patient ID'
+COL_STUDY_NUMBER = 'Study Number'
+COL_VIEW_NUMBER = 'View Number'
 
 
 def _get_chexpert_directory() -> str:
@@ -62,6 +64,16 @@ def _augment_chexpert() -> pd.DataFrame:
     # Add the patient ID column by extracting it from the filename
     # Assume that the 'Path' column follows a well-defined format and extract from "patientNNNNN"
     df[COL_PATIENT_ID] = df.Path.apply(lambda x: int(x.split('/')[2][7:]))
+
+    # Add the study number column, also assuming that the 'Path' column is well-defined
+    df[COL_STUDY_NUMBER] = df.Path.apply(lambda x: int(x.split('/')[3][5:]))
+
+    # Add the view number column, also assuming that the 'Path' column is well-defined
+    view_regex = re.compile('/|_')
+    df[COL_VIEW_NUMBER] = df.Path.apply(lambda x: int(re.split(view_regex, x)[4][4:]))
+
+    print(df.head())
+    print(df.tail())
 
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
