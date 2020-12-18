@@ -13,6 +13,10 @@ It also normalizes the labels to 0, 1, and -1 by converting floating point label
 0.0 to 0) and by filling in empty label columns with 0.
 
 The code assumes that the dataset has been uncompressed into the same directory this file is in.
+
+Usage: python3 -m preprocess > chexpert.csv
+
+From another module: import this module and call the public function.
 """
 
 import logging
@@ -20,6 +24,7 @@ import os
 import re
 import sys
 import pandas as pd
+import imagesize
 
 # Names of the columns added with this code
 COL_PATIENT_ID = 'Patient ID'
@@ -31,6 +36,12 @@ COL_TRAIN_TEST = 'Train/Test'
 # Values of columns
 TRAIN = 'Train'
 TEST = 'Test'
+
+_ch = logging.StreamHandler()
+_ch.setFormatter(logging.Formatter('%(message)s'))
+_logger = logging.getLogger(__name__)
+_logger.addHandler(_ch)
+_logger.setLevel(logging.INFO)
 
 
 def _get_chexpert_directory() -> str:
@@ -52,10 +63,14 @@ def _get_chexpert_directory() -> str:
     return ''
 
 
-def _augment_chexpert() -> pd.DataFrame:
+def _get_augmented_chexpert(add_image_size: bool = False) -> pd.DataFrame:
     """Augment the CheXpert dataset.
 
     Add columns described in the file header.
+
+    Args:
+        add_image_size (bool, optional): Add the image size (takes a few seconds). Defaults to
+        False.
 
     Returns:
         pd.DataFrame: The dataset with the original and augmented columns.
@@ -63,7 +78,7 @@ def _augment_chexpert() -> pd.DataFrame:
     chexpert_dir = _get_chexpert_directory()
     if not chexpert_dir:
         sys.exit('Cannot find the ChexPert directory')
-    logging.info('Found the dataset in %s', chexpert_dir)
+    _logger.info('Found the dataset in %s', chexpert_dir)
 
     df = pd.concat(pd.read_csv(os.path.join(chexpert_dir, f)) for f in ['train.csv', 'valid.csv'])
 
@@ -74,12 +89,15 @@ def _augment_chexpert() -> pd.DataFrame:
 
     # Add the patient ID column by extracting it from the filename
     # Assume that the 'Path' column follows a well-defined format and extract from "patientNNNNN"
+    _logger.info('Adding patient ID')
     df[COL_PATIENT_ID] = df.Path.apply(lambda x: int(x.split('/')[2][7:]))
 
     # Add the study number column, also assuming that the 'Path' column is well-defined
+    _logger.info('Adding study number')
     df[COL_STUDY_NUMBER] = df.Path.apply(lambda x: int(x.split('/')[3][5:]))
 
     # Add the view number column, also assuming that the 'Path' column is well-defined
+    _logger.info('Adding view number')
     view_regex = re.compile('/|_')
     df[COL_VIEW_NUMBER] = df.Path.apply(lambda x: int(re.split(view_regex, x)[4][4:]))
 
@@ -87,18 +105,40 @@ def _augment_chexpert() -> pd.DataFrame:
     # Best reference I found for MeSH groups: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1794003/
     # We have only complete years, so we can't use 'newborn'
     # Also prefix with zero because visualizers sort by ASCII code, not numeric value
+    _logger.info('Adding age group')
     bins = [0, 2, 6, 13, 19, 45, 65, 80, 120]
     ages = ['(0-1) Infant', '(02-5) Preschool', '(06-12) Child', '(13-18) Adolescent',
             '(19-44) Adult', '(45-64) Middle age', '(65-79) Aged', '(80+) Aged 80']
     df[COL_AGE_GROUP] = pd.cut(df.Age, bins=bins, labels=ages, right=False)
 
     # Add the train/test column
+    _logger.info('Adding train/test')
     df[COL_TRAIN_TEST] = df.Path.apply(lambda x: TRAIN if 'train' in x else TEST)
 
-    print(df.head())
-    print(df.tail())
+    # Add the image information column
+    if add_image_size:
+        logging.info('Adding image size (takes a few seconds)')
+        size = [imagesize.get(f) for f in df.Path]
+        df[['Width', 'Height']] = pd.DataFrame(size, index=df.index)
+
+    return df
 
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+def get_augmented_dataset(verbose: bool = False) -> pd.DataFrame:
+    """Get an augmented version of the ChexPert dataset.
 
-_augment_chexpert()
+    See the module header for a description of the columns.
+
+    Args:
+        verbose (bool, optional): Turn verbose logging on/off. Defaults to off.
+
+    Returns:
+        pd.DataFrame: The dataset with the original and augmented columns.
+    """
+    _logger.setLevel(logging.INFO if verbose else logging.ERROR)
+    return _get_augmented_chexpert()
+
+
+if __name__ == '__main__':
+    df = _get_augmented_chexpert(add_image_size=False)
+    # print(df.to_csv(index=False))
