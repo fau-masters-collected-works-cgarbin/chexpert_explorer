@@ -25,6 +25,11 @@ import pandas as pd
 COL_PATIENT_ID = 'Patient ID'
 COL_STUDY_NUMBER = 'Study Number'
 COL_VIEW_NUMBER = 'View Number'
+COL_TRAIN_TEST = 'Train/Test'
+
+# Values of columns
+TRAIN = 'Train'
+TEST = 'Test'
 
 
 def _get_chexpert_directory() -> str:
@@ -71,6 +76,9 @@ def _augment_chexpert() -> pd.DataFrame:
     # Add the view number column, also assuming that the 'Path' column is well-defined
     view_regex = re.compile('/|_')
     df[COL_VIEW_NUMBER] = df.Path.apply(lambda x: int(re.split(view_regex, x)[4][4:]))
+
+    # Add the train/test column
+    df[COL_TRAIN_TEST] = df.Path.apply(lambda x: TRAIN if 'train' in x else TEST)
 
     print(df.head())
     print(df.tail())
