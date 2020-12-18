@@ -1,0 +1,69 @@
+"""Make it easier to work with the dataset.
+
+Create one .csv file that combines the train.csv and valid.csv, then augments the dataset. The
+combined CSV appends the following columns to the existing dataset columns:
+
+- Patient number
+- Study number
+- View number
+- "Train" or "Test" image
+- Age group (MeSH age group - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1794003/)
+
+It also normalizes the labels to 0, 1, and -1 by converting floating point labels to integer (e.g.
+0.0 to 0) and by filling in empty label columns with 0.
+
+The code assumes that the dataset has been uncompressed into the same directory this file is in.
+"""
+
+import logging
+import os
+import re
+import sys
+import pandas as pd
+
+# Names of the columns added with this code
+COL_PATIENT_ID = 'Patient ID'
+
+
+def _get_chexpert_directory() -> str:
+    """Determine the directory where the dataset is stored.
+
+    There are two versions of the dataset, small and large. They are stored in CheXpert-v1.0-small
+    and CheXpert-v1.0-large respectively. To make the code generic, this function finds out what
+    version is installed.
+
+    Note: assumes that 1) only one of the versions is installed and 2) that it is at the same level
+    where this code is being executed.
+
+    Returns:
+        str: The name of the images directory or an empty string if it can't find one.
+    """
+    for entry in os.scandir('.'):
+        if entry.is_dir() and re.match(r'CheXpert-v\d\.\d-', entry.name):
+            return entry.name
+    return ''
+
+
+def _augment_chexpert() -> pd.DataFrame:
+    """Augment the CheXpert dataset.
+
+    Add columns described in the file header.
+
+    Returns:
+        pd.DataFrame: The dataset with the original and augmented columns.
+    """
+    chexpert_dir = _get_chexpert_directory()
+    if not chexpert_dir:
+        sys.exit('Cannot find the ChexPert directory')
+    logging.info('Found the dataset in %s', chexpert_dir)
+
+    df = pd.concat(pd.read_csv(os.path.join(chexpert_dir, f)) for f in ['train.csv', 'valid.csv'])
+
+    # Add the patient ID column by extracting it from the filename
+    # Assume that the 'Path' column follows a well-defined format and extract from "patientNNNNN"
+    df[COL_PATIENT_ID] = df.Path.apply(lambda x: int(x.split('/')[2][7:]))
+
+
+logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+_augment_chexpert()
