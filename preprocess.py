@@ -128,8 +128,10 @@ def _get_augmented_chexpert(add_image_size: bool = False) -> pd.DataFrame:
     # https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
     for c in ['Sex', 'Frontal/Lateral', 'AP/PA', COL_AGE_GROUP, COL_TRAIN_VALIDATION]:
         df[c] = df[c].astype('category')
-    for c in ['Age', COL_PATIENT_ID, COL_STUDY_NUMBER, COL_VIEW_NUMBER] + COL_LABELS:
+    for c in ['Age', COL_PATIENT_ID, COL_STUDY_NUMBER, COL_VIEW_NUMBER]:
         df[c] = df[c].astype('int32')
+    for c in COL_LABELS:
+        df[c] = df[c].astype('int8')
 
     return df
 
