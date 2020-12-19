@@ -7,7 +7,7 @@ combined CSV appends the following columns to the existing dataset columns:
 - Study number
 - View number
 - Age group (MeSH age group - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1794003/)
-- "Train" or "Test" image
+- "Train" or "Validation" image
 
 It also normalizes the labels to 0, 1, and -1 by converting floating point labels to integer (e.g.
 0.0 to 0) and by filling in empty label columns with 0.
@@ -31,11 +31,16 @@ COL_PATIENT_ID = 'Patient ID'
 COL_STUDY_NUMBER = 'Study Number'
 COL_VIEW_NUMBER = 'View Number'
 COL_AGE_GROUP = 'Age Group'
-COL_TRAIN_TEST = 'Train/Test'
+COL_TRAIN_VALIDATION = 'Train/Validation'
 
-# Values of columns
+# Values of columns added with this code
 TRAIN = 'Train'
-TEST = 'Test'
+VALIDATION = 'Validation'
+
+# Other useful constants
+COL_LABELS = ['No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
+              'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis', 'Pneumothorax',
+              'Pleural Effusion', 'Pleural Other', 'Fracture', 'Support Devices']
 
 _ch = logging.StreamHandler()
 _ch.setFormatter(logging.Formatter('%(message)s'))
@@ -82,10 +87,8 @@ def _get_augmented_chexpert(add_image_size: bool = False) -> pd.DataFrame:
 
     df = pd.concat(pd.read_csv(os.path.join(chexpert_dir, f)) for f in ['train.csv', 'valid.csv'])
 
-    # Normalize the labels: replace empty ones with zero, make all of them integers
+    # Normalize the labels: replace empty ones with zero
     df.fillna(0, inplace=True)
-    for c in df.columns[5:]:
-        df[c] = df[c].astype('int32')
 
     # Add the patient ID column by extracting it from the filename
     # Assume that the 'Path' column follows a well-defined format and extract from "patientNNNNN"
@@ -111,15 +114,22 @@ def _get_augmented_chexpert(add_image_size: bool = False) -> pd.DataFrame:
             '(19-44) Adult', '(45-64) Middle age', '(65-79) Aged', '(80+) Aged 80']
     df[COL_AGE_GROUP] = pd.cut(df.Age, bins=bins, labels=ages, right=False)
 
-    # Add the train/test column
-    _logger.info('Adding train/test')
-    df[COL_TRAIN_TEST] = df.Path.apply(lambda x: TRAIN if 'train' in x else TEST)
+    # Add the train/validation column
+    _logger.info('Adding train/validation')
+    df[COL_TRAIN_VALIDATION] = df.Path.apply(lambda x: TRAIN if 'train' in x else VALIDATION)
 
     # Add the image information column
     if add_image_size:
         logging.info('Adding image size (takes a few seconds)')
         size = [imagesize.get(f) for f in df.Path]
         df[['Width', 'Height']] = pd.DataFrame(size, index=df.index)
+
+    # Optimize memory usage: use categorical values and small integer when possiblr
+    # https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+    for c in ['Sex', 'Frontal/Lateral', 'AP/PA', COL_AGE_GROUP, COL_TRAIN_VALIDATION]:
+        df[c] = df[c].astype('category')
+    for c in ['Age', COL_PATIENT_ID, COL_STUDY_NUMBER, COL_VIEW_NUMBER] + COL_LABELS:
+        df[c] = df[c].astype('int32')
 
     return df
 
