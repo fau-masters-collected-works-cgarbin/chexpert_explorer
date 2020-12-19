@@ -139,6 +139,20 @@ def get_augmented_dataset(verbose: bool = False) -> pd.DataFrame:
     return _get_augmented_chexpert()
 
 
+def fix_dataset(df: pd.DataFrame):
+    """Fix issues with the dataset.
+
+    See code for what is fixed.
+
+    Args:
+        df (pd.DataFrame): The dataset before it is fixed.
+    """
+
+    # The is one record with sex 'Unknown'. Change it to "Female" (it doesn't matter which sex we
+    # pick because it is one record out of 200,000+).
+    df.loc[df.Sex == 'Unknown', ['Sex']] = 'Female'
+
+
 if __name__ == '__main__':
     df = _get_augmented_chexpert(add_image_size=False)
     # print(df.to_csv(index=False))
