@@ -140,7 +140,7 @@ def get_augmented_dataset(verbose: bool = False) -> pd.DataFrame:
 
 
 def fix_dataset(df: pd.DataFrame):
-    """Fix issues with the dataset.
+    """Fix issues with the dataset (in place).
 
     See code for what is fixed.
 
@@ -154,5 +154,5 @@ def fix_dataset(df: pd.DataFrame):
 
 
 if __name__ == '__main__':
-    df = _get_augmented_chexpert(add_image_size=False)
-    # print(df.to_csv(index=False))
+    chexpert = _get_augmented_chexpert(add_image_size=False)
+    print(chexpert.to_csv(index=False))
