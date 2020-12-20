@@ -160,11 +160,14 @@ def fix_dataset(df: pd.DataFrame):
         df (pd.DataFrame): The dataset before it is fixed.
     """
 
-    # The is one record with sex 'Unknown'. Change it to "Female" (it doesn't matter which sex we
-    # pick because it is one record out of 200,000+).
+    # There is one record with sex 'Unknown'. There is only one image for that patient, so we don't
+    # have another record where the sex could be copied from. Change it to "Female" (it doesn't
+    # matter which sex we pick because it is one record out of 200,000+).
     df.loc[df.Sex == 'Unknown', ['Sex']] = 'Female'
+    df.Sex.cat.remove_unused_categories(inplace=True)
 
 
 if __name__ == '__main__':
     chexpert = _get_augmented_chexpert(add_image_size=False)
+    fix_dataset(chexpert)
     print(chexpert.to_csv(index=False))
