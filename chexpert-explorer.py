@@ -13,6 +13,8 @@ import preprocess as p
 
 sns.set_style("whitegrid")
 
+ALL_LABELS = '(All)'
+
 
 @st.cache
 def get_pivot_table(labels):
@@ -40,20 +42,34 @@ def get_pivot_table(labels):
     for c in ['Sex', 'Frontal/Lateral', 'AP/PA', p.COL_AGE_GROUP, p.COL_TRAIN_VALIDATION]:
         df[c] = df[c].astype('object')
 
+    # Handle the special "show all labels" case - note that if it is present, it overrides
+    # other labels the user selected
+    adjusted_labels = [] if ALL_LABELS in labels else labels
+
     # Keep the rows that have the selected labels
-    for label in labels:
+    for label in adjusted_labels:
         df = df[df[label] == 1]
 
     # Add a column to aggregate on
     df['count'] = 1
 
     pvt = pd.pivot_table(df, values='count', index=[p.COL_AGE_GROUP],
-                         columns=[p.COL_TRAIN_VALIDATION, 'Sex'], aggfunc=sum, fill_value=0)
+                         columns=[p.COL_TRAIN_VALIDATION, 'Sex'], aggfunc=sum, fill_value=0,
+                         margins=True, margins_name='Total')
     return pvt
 
 
-labels = st.multiselect('Show count of images with these labels',
-                        p.COL_LABELS, default='No Finding')
+@st.cache
+def get_labels():
+    labels = sorted(p.COL_LABELS)
+    # Insert an explicit choice for all labels - even though selecting no labels means "show all",
+    # this option makes it clear to the user
+    labels.insert(0, ALL_LABELS)
+    return labels
+
+
+labels = st.multiselect('Show count of images with these labels (select one or more)',
+                        get_labels(), default=ALL_LABELS)
 
 df_agg = get_pivot_table(labels)
 st.write(df_agg)
