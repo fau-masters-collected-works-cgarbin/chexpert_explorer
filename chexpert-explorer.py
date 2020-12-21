@@ -5,6 +5,7 @@ The code assumes that the dataset has been uncompressed into the same directory 
 Run with: streamlit run chexpert-explorer.py
 """
 
+from typing import List
 import pandas as pd
 import streamlit as st
 import seaborn as sns
@@ -17,7 +18,7 @@ ALL_LABELS = '(All)'
 
 
 @st.cache
-def get_pivot_table(labels):
+def get_pivot_table(labels: List[str]) -> pd.DataFrame:
     """Get a pivot table with the selected labels.
 
     All operations on the dataset are done here to take advantage of Streamlit's cache. If we
@@ -63,8 +64,17 @@ def get_pivot_table(labels):
     return pvt
 
 
-@st.cache
-def get_labels():
+@ st.cache
+def get_labels() -> List[str]:
+    """Get a list of labels to show to the user, extracted from the dataset colum names.
+
+    Labels are shownn in alphabetical order. An explicit option to select all labels is added as the
+    first entry (even though selecting no labels means "show all", this option makes it clear to the
+    user).
+
+    Returns:
+        List[str]: List of labels to show to the user.
+    """
     labels = sorted(p.COL_LABELS)
     # Insert an explicit choice for all labels - even though selecting no labels means "show all",
     # this option makes it clear to the user
