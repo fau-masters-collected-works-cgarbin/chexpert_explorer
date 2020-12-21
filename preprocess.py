@@ -26,6 +26,12 @@ import sys
 import pandas as pd
 import imagesize
 
+# Names of some commonly-used columns already in the dataset
+COL_SEX = 'Sex'
+COL_AGE = 'Age'
+COL_FRONTAL_LATERAL = 'Frontal/Lateral'
+COL_AP_PA = 'AP/PA'
+
 # Names of the columns added with this code
 COL_PATIENT_ID = 'Patient ID'
 COL_STUDY_NUMBER = 'Study Number'
@@ -126,9 +132,9 @@ def _get_augmented_chexpert(add_image_size: bool = False) -> pd.DataFrame:
 
     # Optimize memory usage: use categorical values and small integer when possiblr
     # https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
-    for c in ['Sex', 'Frontal/Lateral', 'AP/PA', COL_AGE_GROUP, COL_TRAIN_VALIDATION]:
+    for c in [COL_SEX, COL_FRONTAL_LATERAL, COL_AP_PA, COL_AGE_GROUP, COL_TRAIN_VALIDATION]:
         df[c] = df[c].astype('category')
-    for c in ['Age', COL_PATIENT_ID, COL_STUDY_NUMBER, COL_VIEW_NUMBER]:
+    for c in [COL_AGE, COL_PATIENT_ID, COL_STUDY_NUMBER, COL_VIEW_NUMBER]:
         df[c] = df[c].astype('int32')
     for c in COL_LABELS:
         df[c] = df[c].astype('int8')
