@@ -43,12 +43,6 @@ def get_pivot_table(labels: List[str]) -> pd.DataFrame:
     for c in ['Sex', 'Frontal/Lateral', 'AP/PA', p.COL_AGE_GROUP, p.COL_TRAIN_VALIDATION]:
         df[c] = df[c].astype('object')
 
-    # Handle the special "show all labels" case: if it is present with other labels, ignore it
-    # and filter on the labels only
-    adjusted_labels = labels
-    if ALL_LABELS in labels and len(labels) > 1:
-        adjusted_labels.remove(ALL_LABELS)
-
     # Keep the rows that have the selected labels
     for label in adjusted_labels:
         df = df[df[label] == 1]
@@ -66,7 +60,7 @@ def get_pivot_table(labels: List[str]) -> pd.DataFrame:
     return pvt
 
 
-@ st.cache
+@st.cache
 def get_labels() -> List[str]:
     """Get a list of labels to show to the user, extracted from the dataset column names.
 
@@ -87,7 +81,12 @@ def get_labels() -> List[str]:
 labels = st.multiselect('Show count of images with these labels (select one or more)',
                         get_labels(), default=ALL_LABELS)
 
-df_agg = get_pivot_table(labels)
+# Remove the special "all labels" label if it's present in the list
+adjusted_labels = labels[:]  # make a copy
+if ALL_LABELS in adjusted_labels:
+    adjusted_labels.remove(ALL_LABELS)
+
+df_agg = get_pivot_table(adjusted_labels)
 if df_agg.empty:
     st.write('There are no images with this combination of filters.')
 else:
@@ -95,3 +94,12 @@ else:
     if ALL_LABELS in labels and len(labels) > 1:
         st.write('Ignoring "{}" when used with other labels'.format(ALL_LABELS))
     st.write(df_agg)
+
+    # Code for experiments
+    # st.write(df_agg.index)
+    # st.write(df_agg.columns)
+
+    # df_agg_u = pd.DataFrame(df_agg.unstack())
+    # st.write(df_agg_u)
+    # st.write(df_agg_u.index)
+    # st.write(df_agg_u.columns)
