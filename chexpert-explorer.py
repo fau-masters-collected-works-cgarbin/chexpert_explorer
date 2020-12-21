@@ -66,11 +66,11 @@ def get_pivot_table(labels: List[str]) -> pd.DataFrame:
 
 @ st.cache
 def get_labels() -> List[str]:
-    """Get a list of labels to show to the user, extracted from the dataset colum names.
+    """Get a list of labels to show to the user, extracted from the dataset column names.
 
-    Labels are shownn in alphabetical order. An explicit option to select all labels is added as the
-    first entry (even though selecting no labels means "show all", this option makes it clear to the
-    user).
+    Labels are returned in alphabetical order. An explicit option to select all labels is added as
+    the first entry (even though selecting no labels means "show all", this option makes it clear to
+    the user).
 
     Returns:
         List[str]: List of labels to show to the user.
