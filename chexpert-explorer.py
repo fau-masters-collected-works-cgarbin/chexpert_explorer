@@ -79,4 +79,7 @@ df_agg = get_pivot_table(labels)
 if df_agg.empty:
     st.write('There are no images with this combination of filters.')
 else:
+    # Warn the user that "all labels" takes precedence
+    if ALL_LABELS in labels and len(labels) > 1:
+        st.write('Showing all images. Remove {} to show specific images.'.format(ALL_LABELS))
     st.write(df_agg)
