@@ -53,6 +53,10 @@ def get_pivot_table(labels):
     # Add a column to aggregate on
     df['count'] = 1
 
+    # Catch the case where the combination of filters results in no images
+    if df.empty:
+        return df
+
     pvt = pd.pivot_table(df, values='count', index=[p.COL_AGE_GROUP],
                          columns=[p.COL_TRAIN_VALIDATION, 'Sex'], aggfunc=sum, fill_value=0,
                          margins=True, margins_name='Total')
@@ -72,4 +76,7 @@ labels = st.multiselect('Show count of images with these labels (select one or m
                         get_labels(), default=ALL_LABELS)
 
 df_agg = get_pivot_table(labels)
-st.write(df_agg)
+if df_agg.empty:
+    st.write('There are no images with this combination of filters.')
+else:
+    st.write(df_agg)
