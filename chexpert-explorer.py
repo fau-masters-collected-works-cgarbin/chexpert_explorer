@@ -43,9 +43,11 @@ def get_pivot_table(labels: List[str]) -> pd.DataFrame:
     for c in ['Sex', 'Frontal/Lateral', 'AP/PA', p.COL_AGE_GROUP, p.COL_TRAIN_VALIDATION]:
         df[c] = df[c].astype('object')
 
-    # Handle the special "show all labels" case - note that if it is present, it overrides
-    # other labels the user selected
-    adjusted_labels = [] if ALL_LABELS in labels else labels
+    # Handle the special "show all labels" case: if it is present with other labels, ignore it
+    # and filter on the labels only
+    adjusted_labels = labels
+    if ALL_LABELS in labels and len(labels) > 1:
+        adjusted_labels.remove(ALL_LABELS)
 
     # Keep the rows that have the selected labels
     for label in adjusted_labels:
@@ -91,5 +93,5 @@ if df_agg.empty:
 else:
     # Warn the user that "all labels" takes precedence
     if ALL_LABELS in labels and len(labels) > 1:
-        st.write('Showing all images. Remove {} to show specific images.'.format(ALL_LABELS))
+        st.write('Ignoring "{}" when used with other labels'.format(ALL_LABELS))
     st.write(df_agg)
