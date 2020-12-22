@@ -7,6 +7,7 @@ Run with: streamlit run chexpert-explorer.py
 
 from typing import List
 import pandas as pd
+from pandas.core.frame import DataFrame
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -84,12 +85,18 @@ def get_labels() -> List[str]:
     return labels
 
 
-def show_graph(df_agg: pd.DataFrame):
+@st.cache
+def get_df_for_plotting(df_agg: pd.DataFrame) -> pd.DataFrame:
     # Flatten the dataframe
     df = df_agg.stack(list(range(df_agg.columns.nlevels)))
     df = df.reset_index()
     # Rename the count column to something more meaningful
     df.rename(columns={0: 'Count of images'}, inplace=True)
+    return df
+
+
+def show_graph(df_agg: pd.DataFrame):
+    df = get_df_for_plotting(df_agg)
 
     columns = df.columns
     num_columns = len(columns)
@@ -97,11 +104,17 @@ def show_graph(df_agg: pd.DataFrame):
         sns.barplot(x=columns[0], y=columns[2], hue=columns[1], data=df)
         st.pyplot(plt)
     elif num_columns == 4:
-        max_col_wrap = len(columns[2])
+        # Let the user change the number of graphs per row
+        max_col_wrap = len(df[columns[2]].unique())
         col_wrap = st.number_input('Graphs per row', min_value=1, max_value=max_col_wrap,
                                    value=max_col_wrap)
+        # When showing one graph per row, let the y axis adjust to the data, so users can zoom into
+        # the data
+        sharey = col_wrap > 1
+        if not sharey:
+            st.write('Y axis not to the same scale')
         sns.catplot(x=columns[0], y=columns[3], hue=columns[1], col=columns[2], data=df, kind='bar',
-                    col_wrap=col_wrap)
+                    col_wrap=col_wrap, sharey=sharey)
         st.pyplot(plt)
     elif num_columns == 5:
         sns.catplot(x=columns[0], y=columns[4], hue=columns[1], col=columns[2], row=columns[3],
