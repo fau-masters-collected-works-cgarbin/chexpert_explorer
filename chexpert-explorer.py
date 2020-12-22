@@ -14,6 +14,7 @@ import preprocess as p
 
 
 sns.set_style("whitegrid")
+sns.set_palette("Set3", 6, 0.75)
 
 ALL_LABELS = '(All)'
 
@@ -88,7 +89,7 @@ def show_graph(df_agg: pd.DataFrame):
     df = df_agg.stack(list(range(df_agg.columns.nlevels)))
     df = df.reset_index()
     # Rename the count column to something more meaningful
-    df.rename(columns={'0': 'Count of images'}, inplace=True)
+    df.rename(columns={0: 'Count of images'}, inplace=True)
 
     columns = df.columns
     num_columns = len(columns)
