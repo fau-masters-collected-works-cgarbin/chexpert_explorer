@@ -94,8 +94,7 @@ def show_graph(df_agg: pd.DataFrame):
     columns = df.columns
     num_columns = len(columns)
     if num_columns == 3:
-        fig, ax = plt.subplots(figsize=(15, 5))
-        sns.catplot(x=columns[0], y=columns[-1], hue=columns[1], kind="bar", data=df, ax=ax)
+        sns.barplot(x=columns[0], y=columns[-1], hue=columns[1], data=df)
         st.pyplot(plt)
 
 
