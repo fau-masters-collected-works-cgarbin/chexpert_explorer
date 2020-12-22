@@ -94,7 +94,18 @@ def show_graph(df_agg: pd.DataFrame):
     columns = df.columns
     num_columns = len(columns)
     if num_columns == 3:
-        sns.barplot(x=columns[0], y=columns[-1], hue=columns[1], data=df)
+        sns.barplot(x=columns[0], y=columns[2], hue=columns[1], data=df)
+        st.pyplot(plt)
+    elif num_columns == 4:
+        max_col_wrap = len(columns[2])
+        col_wrap = st.number_input('Graphs per row', min_value=1, max_value=max_col_wrap,
+                                   value=max_col_wrap)
+        sns.catplot(x=columns[0], y=columns[3], hue=columns[1], col=columns[2], data=df, kind='bar',
+                    col_wrap=col_wrap)
+        st.pyplot(plt)
+    elif num_columns == 5:
+        sns.catplot(x=columns[0], y=columns[4], hue=columns[1], col=columns[2], row=columns[3],
+                    data=df, kind='bar')
         st.pyplot(plt)
 
 
