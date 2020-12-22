@@ -106,6 +106,9 @@ columns = st.sidebar.multiselect('Select columns', ROW_COLUMNS)
 
 labels = st.sidebar.multiselect('Show count of images with these labels (select one or more)',
                                 get_labels(), default=ALL_LABELS)
+# Warn the user that "all labels" is ignored when used with other labels
+if ALL_LABELS in labels and len(labels) > 1:
+    st.sidebar.write('Ignoring "{}" when used with other labels'.format(ALL_LABELS))
 
 if not rows and not columns:
     st.write('Select rows and columns')
@@ -121,9 +124,6 @@ else:
     if df_agg.empty:
         st.write('There are no images with this combination of filters.')
     else:
-        # Warn the user that "all labels" is ignored when used with other labels
-        if ALL_LABELS in labels and len(labels) > 1:
-            st.write('Ignoring "{}" when used with other labels'.format(ALL_LABELS))
         st.write(df_agg)
         show_graph(get_pivot_table(adjusted_labels, rows, columns, totals=False))
 
