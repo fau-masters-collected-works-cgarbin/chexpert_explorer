@@ -7,7 +7,6 @@ Run with: streamlit run chexpert-explorer.py
 
 from typing import List
 import pandas as pd
-from pandas.core.frame import DataFrame
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -52,7 +51,7 @@ def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
         df[c] = df[c].astype('object')
 
     # Keep the rows that have the selected labels
-    for label in adjusted_labels:
+    for label in labels:
         df = df[df[label] == 1]
 
     # Add a column to aggregate on
@@ -108,8 +107,7 @@ def show_graph(df_agg: pd.DataFrame):
         max_col_wrap = len(df[columns[2]].unique())
         col_wrap = st.number_input('Graphs per row', min_value=1, max_value=max_col_wrap,
                                    value=max_col_wrap)
-        # When showing one graph per row, let the y axis adjust to the data, so users can zoom into
-        # the data
+        # When showing one graph per row, let the y axis adjust to the data to show more details
         sharey = col_wrap > 1
         if not sharey:
             st.write('Y axis not to the same scale')
@@ -150,32 +148,3 @@ else:
     else:
         st.write(df_agg)
         show_graph(get_pivot_table(adjusted_labels, rows, columns, totals=False))
-
-        # Code for experiments
-
-        def show_dataframe_details(df, title):
-            st.write(title)
-            st.write(df)
-            st.write('Indices')
-            st.write(df.index)
-            st.write('Columns')
-            st.write(df.columns)
-
-        agg = st.checkbox('Aggreated dataframe')
-        if agg:
-            show_dataframe_details(df_agg, 'Aggregated dataframe')
-        ri = st.checkbox('Reset Index')
-        if ri:
-            show_dataframe_details(df_agg.reset_index(), 'Reset Index')
-        df_agg_u = pd.DataFrame(df_agg.unstack())
-        unstacked = st.checkbox('Unstacked')
-        if unstacked:
-            show_dataframe_details(df_agg_u, 'Unstacked')
-        uri = st.checkbox('Unstacked - Reset Index')
-        if uri:
-            show_dataframe_details(df_agg_u.reset_index(), 'Unstacked - Reset Index')
-        stack_all_ri = st.checkbox('Stack all levels, reset index')
-        if stack_all_ri:
-            df = df_agg.stack(list(range(df_agg.columns.nlevels)))
-            df = df.reset_index()
-            show_dataframe_details(df, 'Stack all levels, reset index')
