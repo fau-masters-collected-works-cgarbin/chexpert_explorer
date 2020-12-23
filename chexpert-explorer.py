@@ -25,11 +25,10 @@ def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
     """Get a pivot table with the selected labels.
 
     All operations on the dataset are done here to take advantage of Streamlit's cache. If we
-    modify the dataset after returning it here, we will get warnings that are mutating a cached
-    object.
+    modify the dataset after returning it, we will get warnings that are mutating a cached object.
 
     Args:
-        labels (List[str]): The list labels to select from the dataset, or an empty list to
+        labels (List[str]): The list of labels to select from the dataset, or an empty list to
                             select all labels.
         rows (List[str]): The list of dataset fields to use as the rows (indices).
         columns (List[str]): The list of dataset fiels to use as columns.
@@ -78,8 +77,6 @@ def get_labels() -> List[str]:
         List[str]: List of labels to show to the user.
     """
     labels = sorted(p.COL_LABELS)
-    # Insert an explicit choice for all labels - even though selecting no labels means "show all",
-    # this option makes it clear to the user
     labels.insert(0, ALL_LABELS)
     return labels
 
@@ -110,8 +107,8 @@ def get_df_for_plotting(df_agg: pd.DataFrame) -> pd.DataFrame:
 def show_graph(df_agg: pd.DataFrame):
     """Show a graph for the aggregated DataFrame.
 
-    Teh graph is a barplot categorized by the columns, left to right.  The second columns is always
-    used as the hue. The other columns are used for rows and columns in the graph.
+    The graph is a collection of bar plots, categorized by the columns, left to right.  The second
+    column is always used as the hue. The other columns are used for rows and columns in the graph.
 
     Args:
         df_agg (pd.DataFrame): The aggregrated DataFrame to graph.
