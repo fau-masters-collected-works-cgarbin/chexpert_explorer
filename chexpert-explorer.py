@@ -86,6 +86,19 @@ def get_labels() -> List[str]:
 
 @st.cache
 def get_df_for_plotting(df_agg: pd.DataFrame) -> pd.DataFrame:
+    """Get the DataFrame used for plotting.
+
+    The DataFrame used for plotting is a flattened vresion of the raw DataFrame, so we can use the
+    columns for the plot (before flattening, they were indices).
+
+    This is a separate function to take advantage of Streamlit's caching.
+
+    Args:
+        df_agg (pd.DataFrame): The aggregrated DataFrame, created with pivot_table or groupby.
+
+    Returns:
+        pd.DataFrame: The flattened DataFrame, with indices moved to columns.
+    """
     # Flatten the dataframe
     df = df_agg.stack(list(range(df_agg.columns.nlevels)))
     df = df.reset_index()
@@ -95,6 +108,14 @@ def get_df_for_plotting(df_agg: pd.DataFrame) -> pd.DataFrame:
 
 
 def show_graph(df_agg: pd.DataFrame):
+    """Show a graph for the aggregated DataFrame.
+
+    Teh graph is a barplot categorized by the columns, left to right.  The second columns is always
+    used as the hue. The other columns are used for rows and columns in the graph.
+
+    Args:
+        df_agg (pd.DataFrame): The aggregrated DataFrame to graph.
+    """
     df = get_df_for_plotting(df_agg)
 
     columns = df.columns
