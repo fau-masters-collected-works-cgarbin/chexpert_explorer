@@ -106,13 +106,12 @@ def get_labels() -> List[str]:
 
 
 @st.cache
-def get_df_for_plotting(df_agg: pd.DataFrame) -> pd.DataFrame:
-    """Get the DataFrame used for plotting.
+def get_flattened_df(df_agg: pd.DataFrame) -> pd.DataFrame:
+    """Get a flattened version of the DataFrame.
 
-    The DataFrame used for plotting is a flattened vresion of the raw DataFrame, so we can use the
-    columns for the plot (before flattening, they were indices).
-
-    This is a separate function to take advantage of Streamlit's caching.
+    The flattened version of the DataFrames has only one column with values (the count of images).
+    The other columns in the DataFrame are descriptions of that value. All indices, including
+    multi-indices, are stored as columns.
 
     Args:
         df_agg (pd.DataFrame): The aggregrated DataFrame, created with pivot_table or groupby.
@@ -137,7 +136,7 @@ def show_graph(df_agg: pd.DataFrame):
     Args:
         df_agg (pd.DataFrame): The aggregrated DataFrame to graph.
     """
-    df = get_df_for_plotting(df_agg)
+    df = get_flattened_df(df_agg)
 
     columns = df.columns
     num_columns = len(columns)
@@ -193,3 +192,8 @@ else:
     else:
         st.write(df_agg)
         show_graph(get_pivot_table(adjusted_labels, rows, columns, totals=False))
+
+    pct = get_percentages(df_agg, totals=False, percentages=)
+    st.write('Unstacked')
+    st.write(df_agg.unstack())
+    st.write(get_percentages)
