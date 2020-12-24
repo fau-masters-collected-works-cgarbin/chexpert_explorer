@@ -151,10 +151,7 @@ def show_graph(df_agg: pd.DataFrame):
         max_col_wrap = len(df[columns[2]].unique())
         col_wrap = st.number_input('Graphs per row', min_value=1, max_value=max_col_wrap,
                                    value=max_col_wrap)
-        # When showing one graph per row, let the y axis adjust to the data to show more details
-        sharey = col_wrap > 1
-        if not sharey:
-            st.write('Y axis not to the same scale')
+        sharey = st.checkbox('Share Y axes')
         sns.catplot(x=columns[0], y=columns[3], hue=columns[1], col=columns[2], data=df, kind='bar',
                     col_wrap=col_wrap, sharey=sharey)
         st.pyplot(plt)
@@ -198,7 +195,7 @@ else:
             pvt_pct = get_percentages(df_agg, totals, pct_lower)
             # Combine the percentanges with the value
             df_agg = df_agg.combine(pvt_pct,
-                                    lambda s1, s2: ['{:,d} ({:5.1f})'.format(
+                                    lambda s1, s2: ['{:,d} ({:.1f})'.format(
                                         int(v1), v2) for v1, v2 in zip(s1, s2)])
 
         st.write(df_agg)
