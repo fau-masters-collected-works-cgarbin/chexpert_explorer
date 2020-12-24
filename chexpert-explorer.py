@@ -21,7 +21,7 @@ ALL_LABELS = '(All)'
 
 @st.cache
 def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
-                    totals: bool = False) -> pd.DataFrame:
+                    totals: bool = False, percentages: str = 'none') -> pd.DataFrame:
     """Get a pivot table with the selected labels.
 
     All operations on the dataset are done here to take advantage of Streamlit's cache. If we
@@ -29,10 +29,12 @@ def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
 
     Args:
         labels (List[str]): The list of labels to select from the dataset, or an empty list to
-                            select all labels.
+            select all labels.
         rows (List[str]): The list of dataset fields to use as the rows (indices).
         columns (List[str]): The list of dataset fiels to use as columns.
         totals (bool): Set to True to get totals by row and column
+        percentages (str): 'rows' to add percentages by row, 'columns' to add percentages by
+            columns, or 'none' to not add percentages.
 
     Returns:
         [pd.DataFrame]: A pivot table with the number of images for the selected labels.
@@ -62,6 +64,21 @@ def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
 
     pvt = pd.pivot_table(df, values='count', index=rows, columns=columns, aggfunc=sum, fill_value=0,
                          margins=totals, margins_name='Total')
+
+    # Add percentrages, if requested (from https://stackoverflow.com/a/42006745)
+    if percentages in ['rows', 'columns']:
+        # Account for a "Totals" row if one was requested
+        divider = 2 if totals else 1
+        sum_axis = 'rows' if percentages == 'columns' else 'columns'
+        pvt_pct = pvt.copy()
+        cols = pvt_pct.columns
+        pvt_pct[cols] = pvt_pct[cols].div(pvt_pct[cols].sum(
+            axis=sum_axis)/divider, axis=percentages).multiply(100)
+        # Combine the percentanges with the value
+        pvt = pvt.combine(pvt_pct,
+                          lambda s1, s2: ['{:,d} ({:5.1f})'.format(
+                              int(v1), v2) for v1, v2 in zip(s1, s2)])
+
     return pvt
 
 
@@ -150,6 +167,8 @@ labels = st.sidebar.multiselect('Show count of images with these labels (select 
 if ALL_LABELS in labels and len(labels) > 1:
     st.sidebar.write('Ignoring "{}" when used with other labels'.format(ALL_LABELS))
 
+percentages = st.sidebar.radio('Add percentages across', ('Rows', 'Columns', 'No percentages'))
+
 if not rows and not columns:
     st.write('Select rows and columns')
 elif not set(rows).isdisjoint(columns):
@@ -160,7 +179,8 @@ else:
     if ALL_LABELS in adjusted_labels:
         adjusted_labels.remove(ALL_LABELS)
 
-    df_agg = get_pivot_table(adjusted_labels, rows, columns, totals=True)
+    df_agg = get_pivot_table(adjusted_labels, rows, columns, totals=True,
+                             percentages=percentages.lower())
     if df_agg.empty:
         st.write('There are no images with this combination of filters.')
     else:
