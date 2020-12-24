@@ -7,7 +7,6 @@ Run with: streamlit run chexpert-explorer.py
 
 from typing import List
 import pandas as pd
-from pandas.core.frame import DataFrame
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -87,7 +86,7 @@ def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
         return df
 
     pvt = pd.pivot_table(df, values='count', index=rows, columns=columns, aggfunc=sum, fill_value=0,
-                         margins=totals, margins_name='Total')
+                         margins=totals, margins_name='Total', dropna=False)
 
     return pvt
 
