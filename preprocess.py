@@ -126,7 +126,7 @@ def _get_augmented_chexpert(add_image_size: bool = False) -> pd.DataFrame:
 
     # Add the image information column
     if add_image_size:
-        logging.info('Adding image size (takes a few seconds)')
+        _logger.info('Adding image size (takes a few seconds)')
         size = [imagesize.get(f) for f in df.Path]
         df[['Width', 'Height']] = pd.DataFrame(size, index=df.index)
 
@@ -174,6 +174,6 @@ def fix_dataset(df: pd.DataFrame):
 
 
 if __name__ == '__main__':
-    chexpert = _get_augmented_chexpert(add_image_size=False)
+    chexpert = _get_augmented_chexpert(add_image_size=True)
     fix_dataset(chexpert)
     print(chexpert.to_csv(index=False))
