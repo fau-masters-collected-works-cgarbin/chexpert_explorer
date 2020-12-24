@@ -7,6 +7,7 @@ Run with: streamlit run chexpert-explorer.py
 
 from typing import List
 import pandas as pd
+from pandas.core.frame import DataFrame
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -17,6 +18,19 @@ sns.set_style("whitegrid")
 sns.set_palette("Set3", 6, 0.75)
 
 ALL_LABELS = '(All)'
+
+
+@st.cache
+def get_percentages(df: pd.DataFrame, totals: bool, percentages: str) -> pd.DataFrame:
+    # Add percentages, if requested (from https://stackoverflow.com/a/42006745)
+    # Account for a "Totals" row if one was requested
+    divider = 2 if totals else 1
+    sum_axis = 'rows' if percentages == 'columns' else 'columns'
+    df_pct = df.copy()
+    cols = df_pct.columns
+    df_pct[cols] = df_pct[cols].div(df_pct[cols].sum(
+        axis=sum_axis)/divider, axis=percentages).multiply(100)
+    return df_pct
 
 
 @st.cache
@@ -65,15 +79,8 @@ def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
     pvt = pd.pivot_table(df, values='count', index=rows, columns=columns, aggfunc=sum, fill_value=0,
                          margins=totals, margins_name='Total')
 
-    # Add percentrages, if requested (from https://stackoverflow.com/a/42006745)
     if percentages in ['rows', 'columns']:
-        # Account for a "Totals" row if one was requested
-        divider = 2 if totals else 1
-        sum_axis = 'rows' if percentages == 'columns' else 'columns'
-        pvt_pct = pvt.copy()
-        cols = pvt_pct.columns
-        pvt_pct[cols] = pvt_pct[cols].div(pvt_pct[cols].sum(
-            axis=sum_axis)/divider, axis=percentages).multiply(100)
+        pvt_pct = get_percentages(pvt, totals, percentages)
         # Combine the percentanges with the value
         pvt = pvt.combine(pvt_pct,
                           lambda s1, s2: ['{:,d} ({:5.1f})'.format(
