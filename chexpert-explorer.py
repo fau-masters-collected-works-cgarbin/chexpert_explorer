@@ -22,7 +22,19 @@ ALL_LABELS = '(All)'
 
 @st.cache
 def get_percentages(df: pd.DataFrame, totals: bool, percentages: str) -> pd.DataFrame:
-    # Add percentages, if requested (from https://stackoverflow.com/a/42006745)
+    """Return a percentage version of the DataFrame, across rows or columns, as specified.
+
+    Based on https://stackoverflow.com/a/42006745.
+
+    Args:
+        df (pd.DataFrame): The DataFrame with the raw numbers.
+        totals (bool): Whether the DataFrame has a "totals" row and column (when aggregated with
+            "margins" set to True).
+        percentages (str): Whether to calculate percentages by ``row`` or ``column``.
+
+    Returns:
+        pd.DataFrame: The DataFrame in percentages.
+    """
     # Account for a "Totals" row if one was requested
     divider = 2 if totals else 1
     sum_axis = 'rows' if percentages == 'columns' else 'columns'
@@ -35,7 +47,7 @@ def get_percentages(df: pd.DataFrame, totals: bool, percentages: str) -> pd.Data
 
 @st.cache
 def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
-                    totals: bool = False, percentages: str = 'none') -> pd.DataFrame:
+                    totals: bool = False) -> pd.DataFrame:
     """Get a pivot table with the selected labels.
 
     All operations on the dataset are done here to take advantage of Streamlit's cache. If we
@@ -47,8 +59,6 @@ def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
         rows (List[str]): The list of dataset fields to use as the rows (indices).
         columns (List[str]): The list of dataset fiels to use as columns.
         totals (bool): Set to True to get totals by row and column
-        percentages (str): 'rows' to add percentages by row, 'columns' to add percentages by
-            columns, or 'none' to not add percentages.
 
     Returns:
         [pd.DataFrame]: A pivot table with the number of images for the selected labels.
@@ -78,13 +88,6 @@ def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
 
     pvt = pd.pivot_table(df, values='count', index=rows, columns=columns, aggfunc=sum, fill_value=0,
                          margins=totals, margins_name='Total')
-
-    if percentages in ['rows', 'columns']:
-        pvt_pct = get_percentages(pvt, totals, percentages)
-        # Combine the percentanges with the value
-        pvt = pvt.combine(pvt_pct,
-                          lambda s1, s2: ['{:,d} ({:5.1f})'.format(
-                              int(v1), v2) for v1, v2 in zip(s1, s2)])
 
     return pvt
 
@@ -185,15 +188,23 @@ else:
     if ALL_LABELS in adjusted_labels:
         adjusted_labels.remove(ALL_LABELS)
 
-    df_agg = get_pivot_table(adjusted_labels, rows, columns, totals=True,
-                             percentages=percentages.lower())
+    totals = False
+    df_agg = get_pivot_table(adjusted_labels, rows, columns, totals=totals)
     if df_agg.empty:
         st.write('There are no images with this combination of filters.')
     else:
+        pct_lower = percentages.lower()
+        if pct_lower in ['rows', 'columns']:
+            pvt_pct = get_percentages(df_agg, totals, pct_lower)
+            # Combine the percentanges with the value
+            df_agg = df_agg.combine(pvt_pct,
+                                    lambda s1, s2: ['{:,d} ({:5.1f})'.format(
+                                        int(v1), v2) for v1, v2 in zip(s1, s2)])
+
         st.write(df_agg)
         show_graph(get_pivot_table(adjusted_labels, rows, columns, totals=False))
 
-    pct = get_percentages(df_agg, totals=False, percentages=)
-    st.write('Unstacked')
-    st.write(df_agg.unstack())
-    st.write(get_percentages)
+    # pct = get_percentages(df_agg, totals=False, percentages=)
+    # st.write('Unstacked')
+    # st.write(df_agg.unstack())
+    # st.write(get_percentages)
