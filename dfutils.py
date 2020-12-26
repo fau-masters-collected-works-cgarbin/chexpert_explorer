@@ -67,7 +67,7 @@ def merge_percentages(df: pd.DataFrame, pct_by: str, total_col_name: str = None)
         pd.DataFrame: A DataFrame with a percentage column next to each counter column.
     """
     # Start with two dataframes, one with the counter and another with the percentage that have only
-    # only column (the counter or the percentage) - everything else is an index
+    # one column (the counter or the percentage) - everything else is an index
     df_flat = get_flattened_df(df, reset_index=False)
     pct_flat = get_flattened_df(get_percentages(
         df, total_col_name is not None, pct_by), reset_index=False)
@@ -85,6 +85,9 @@ def merge_percentages(df: pd.DataFrame, pct_by: str, total_col_name: str = None)
     unstack_indices = list(range(df.index.nlevels, df_flat.index.nlevels))
     df_combined = df_combined.unstack(unstack_indices, fill_value=0)
 
+    # If any operation resulted in NaN, replace with zeroes
+    df_combined.fillna(0, inplace=True)
+
     # Interleave the percentage columns (to the right) with the counter columns (to the left), so
     # that each counter column is followed by its respective percentage column
     all_cols = df_combined.columns.values
@@ -93,7 +96,7 @@ def merge_percentages(df: pd.DataFrame, pct_by: str, total_col_name: str = None)
     interleaved_cols = [c for pair in zip(counter_cols, pct_cols) for c in pair]
     df_combined = df_combined[interleaved_cols]
 
-    # At this point, the image/percentage column is at the top of the multiindex
+    # At this point, the counter/percentage column is at the top of the multiindex
     # Move it to the bottom of the multiindex
     top_moved_to_bottom = list(range(1, df_combined.columns.nlevels))
     top_moved_to_bottom.append(0)
