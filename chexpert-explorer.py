@@ -17,6 +17,7 @@ sns.set_style("whitegrid")
 sns.set_palette("Set3", 6, 0.75)
 
 ALL_LABELS = '(All)'
+TOTAL = 'Total'
 
 
 @st.cache
@@ -45,9 +46,9 @@ def get_percentages(df: pd.DataFrame, totals: bool, percentages: str) -> pd.Data
 
 
 @st.cache
-def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
-                    totals: bool = False) -> pd.DataFrame:
-    """Get a pivot table with the selected labels.
+def get_images_count(labels: List[str], rows: List[str], columns: List[str],
+                     totals: bool = False) -> pd.DataFrame:
+    """Get a pivot table with the image count for the select filters.
 
     All operations on the dataset are done here to take advantage of Streamlit's cache. If we
     modify the dataset after returning it, we will get warnings that are mutating a cached object.
@@ -86,9 +87,70 @@ def get_pivot_table(labels: List[str], rows: List[str], columns: List[str],
         return df
 
     pvt = pd.pivot_table(df, values='count', index=rows, columns=columns, aggfunc=sum, fill_value=0,
-                         margins=totals, margins_name='Total', dropna=False)
+                         margins=totals, margins_name=TOTAL, dropna=False)
+    pvt.fillna(0, inplace=True)
 
     return pvt
+
+
+@st.cache
+def merge_percentages(df: pd.DataFrame, pct_by: str, total_col_name: str = None) -> pd.DataFrame:
+    """Add percentages to a DataFrame that has counters.
+
+    Args:
+        df (pd.DataFrame): The DataFrame that has counters only.
+        pct_by (str): Whether to calculates percentages by ``rows`` or ``columns``.
+        total_col_name (str, optional): The name of a "totals" column, if there is one. Used to
+            adjust the percentage calculation (avoids double counting). Defaults to None.
+
+    Returns:
+        pd.DataFrame: A DataFrame with a percentage column next to each counter column.
+    """
+    # Start with two dataframes, one with the counter and another with the percentage that have only
+    # only column (the counter or the percentage) - everything else is an index
+    df_flat = get_flattened_df(df, reset_index=False)
+    pct_flat = get_flattened_df(get_percentages(
+        df, total_col_name is not None, pct_by), reset_index=False)
+
+    # Merge them into one dataframe that has the two columns, counter and percentage
+    # We start with a copy to not mess with the original version (it may be cached, e.g. when using
+    # with Streamlit)
+    df_combined = df_flat.copy()
+    df_combined['%'] = pct_flat[pct_flat.columns[-1]]
+
+    # With the counter and percentage columns in place, we can move the original columns back to
+    # their place ("unflat)")
+    # This restores the layout of the original dataframe, with the percentage columns all the way
+    # to the right
+    unstack_indices = list(range(df.index.nlevels, df_flat.index.nlevels))
+    df_combined = df_combined.unstack(unstack_indices, fill_value=0)
+
+    # Interleave the percentage columns (to the right) with the counter columns (to the left), so
+    # that each counter column is followed by its respective percentage column
+    all_cols = df_combined.columns.values
+    counter_cols = all_cols[:int(len(all_cols)/2)]
+    pct_cols = all_cols[int(len(all_cols)/2):]
+    interleaved_cols = [c for pair in zip(counter_cols, pct_cols) for c in pair]
+    df_combined = df_combined[interleaved_cols]
+
+    # At this point, the image/percentage column is at the top of the multiindex
+    # Move it to the bottom of the multiindex
+    top_moved_to_bottom = list(range(1, df_combined.columns.nlevels))
+    top_moved_to_bottom.append(0)
+    df_combined = df_combined.reorder_levels(top_moved_to_bottom, axis='columns')
+
+    # Sort the columns to display them in a logical way
+    df_combined.sort_index(axis='columns', level=0, sort_remaining=False, inplace=True)
+
+    # If there is a total column, make sure it's the last one
+    if total_col_name is not None:
+        top_level_columns = list(df_combined.columns.get_level_values(0).unique())
+        if total_col_name in top_level_columns:
+            top_level_columns.remove(total_col_name)
+            top_level_columns.append(total_col_name)
+            df_combined = df_combined.reindex(top_level_columns, axis='columns', level=0)
+
+    return df_combined
 
 
 @st.cache
@@ -108,24 +170,28 @@ def get_labels() -> List[str]:
 
 
 @st.cache
-def get_flattened_df(df_agg: pd.DataFrame) -> pd.DataFrame:
+def get_flattened_df(df_agg: pd.DataFrame, reset_index=False) -> pd.DataFrame:
     """Get a flattened version of the DataFrame.
 
     The flattened version of the DataFrames has only one column with values (the count of images).
-    The other columns in the DataFrame are descriptions of that value. All indices, including
-    multi-indices, are stored as columns.
+    The other columns in the DataFrame are descriptions of that value.
 
     Args:
         df_agg (pd.DataFrame): The aggregrated DataFrame, created with pivot_table or groupby.
+        reset_index: Whether to reset the index, i.e. turn all indices into columns, or leave the
+            indices in place, as created with the stacking operation.
 
     Returns:
-        pd.DataFrame: The flattened DataFrame, with indices moved to columns.
+        pd.DataFrame: The flattened DataFrame
     """
     # Flatten the dataframe
     df = df_agg.stack(list(range(df_agg.columns.nlevels)))
-    df = df.reset_index()
+    if reset_index:
+        df = df.reset_index()
+    else:
+        df = pd.DataFrame(df)
     # Rename the count column to something more meaningful
-    df.rename(columns={0: 'Count of images'}, inplace=True)
+    df.rename(columns={0: 'Images'}, inplace=True)
     return df
 
 
@@ -138,7 +204,7 @@ def show_graph(df_agg: pd.DataFrame):
     Args:
         df_agg (pd.DataFrame): The aggregrated DataFrame to graph.
     """
-    df = get_flattened_df(df_agg)
+    df = get_flattened_df(df_agg, reset_index=True)
 
     columns = df.columns
     num_columns = len(columns)
@@ -184,23 +250,19 @@ else:
     if ALL_LABELS in adjusted_labels:
         adjusted_labels.remove(ALL_LABELS)
 
-    totals = False
-    df_agg = get_pivot_table(adjusted_labels, rows, columns, totals=totals)
+    totals = True
+    df_agg = get_images_count(adjusted_labels, rows, columns, totals=totals)
     if df_agg.empty:
         st.write('There are no images with this combination of filters.')
     else:
         pct_lower = percentages.lower()
         if pct_lower in ['rows', 'columns']:
-            pvt_pct = get_percentages(df_agg, totals, pct_lower)
-            # Combine the percentanges with the value
-            df_agg = df_agg.combine(pvt_pct,
-                                    lambda s1, s2: ['{:,d} ({:.1f})'.format(
-                                        int(v1), v2) for v1, v2 in zip(s1, s2)])
+            df_agg = merge_percentages(df_agg, pct_lower, TOTAL)
 
-        st.write(df_agg)
-        show_graph(get_pivot_table(adjusted_labels, rows, columns, totals=False))
+        # Streamlit does not yet support formatting for multiindex dataframes
+        # It will be added with https://github.com/streamlit/streamlit/issues/956
+        # Until that issue is resolved, we need to format the numbers ourselves
+        df_agg = df_agg.applymap(lambda x: '{:,.0f}'.format(x))
 
-    # pct = get_percentages(df_agg, totals=False, percentages=)
-    # st.write('Unstacked')
-    # st.write(df_agg.unstack())
-    # st.write(get_percentages)
+        st.table(df_agg)
+        show_graph(get_images_count(adjusted_labels, rows, columns, totals=False))
