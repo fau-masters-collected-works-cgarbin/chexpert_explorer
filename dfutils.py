@@ -46,6 +46,7 @@ def get_flattened_df(df_agg: pd.DataFrame, reset_index=False) -> pd.DataFrame:
     if reset_index:
         df = df.reset_index()
     else:
+        # Stacking may result in a series - make sure we return a DataFrame
         df = pd.DataFrame(df)
     # Rename the count column to something more meaningful
     df.rename(columns={0: 'Images'}, inplace=True)

@@ -130,7 +130,7 @@ if ALL_LABELS in labels and len(labels) > 1:
 
 percentages = st.sidebar.radio('Add percentages across', ('Rows', 'Columns', 'No percentages'))
 
-if not rows and not columns:
+if not rows:
     st.write('Select rows and columns')
 elif not set(rows).isdisjoint(columns):
     st.write('Rows and columns cannot have the same values')
