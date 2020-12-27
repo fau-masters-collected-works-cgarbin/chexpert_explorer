@@ -165,7 +165,6 @@ def fix_dataset(df: pd.DataFrame):
     Args:
         df (pd.DataFrame): The dataset before it is fixed.
     """
-
     # There is one record with sex 'Unknown'. There is only one image for that patient, so we don't
     # have another record where the sex could be copied from. Change it to "Female" (it doesn't
     # matter which sex we pick because it is one record out of 200,000+).
@@ -174,7 +173,7 @@ def fix_dataset(df: pd.DataFrame):
 
 
 def main():
-    """Separate main() to follow conventions and docstring to make pylint happy."""
+    """Separate main fucntion to follow conventions and docstring to make pylint happy."""
     chexpert = _get_augmented_chexpert(add_image_size=True)
     fix_dataset(chexpert)
     print(chexpert.to_csv(index=False))
