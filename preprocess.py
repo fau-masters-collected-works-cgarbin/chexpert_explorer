@@ -173,7 +173,12 @@ def fix_dataset(df: pd.DataFrame):
     df.Sex.cat.remove_unused_categories(inplace=True)
 
 
-if __name__ == '__main__':
+def main():
+    """Separate main() to follow conventions and docstring to make pylint happy."""
     chexpert = _get_augmented_chexpert(add_image_size=True)
     fix_dataset(chexpert)
     print(chexpert.to_csv(index=False))
+
+
+if __name__ == '__main__':
+    main()
