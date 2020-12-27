@@ -10,7 +10,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
-import preprocess as p
+import chexpert_dataset as cd
 import dfutils as du
 
 
@@ -23,11 +23,13 @@ TOTAL = 'Total'
 
 @st.cache
 def get_images_count(labels: List[str], rows: List[str], columns: List[str],
-                     totals: bool = False) -> pd.DataFrame:
+                     totals: bool = False, percentages: str = None,
+                     format: bool = False) -> pd.DataFrame:
     """Get a pivot table with the image count for the selected filters.
 
     All operations on the dataset are done here to take advantage of Streamlit's cache. If we
-    modify the dataset after returning it, we will get warnings that are mutating a cached object.
+    modify the dataset after returning it, we will get warnings that are mutating a cached object
+    (not to mention potential bugs that are obscure to debug).
 
     Args:
         labels (List[str]): The list of labels to select from the dataset, or an empty list to
@@ -35,20 +37,23 @@ def get_images_count(labels: List[str], rows: List[str], columns: List[str],
         rows (List[str]): The list of dataset fields to use as the rows (indices).
         columns (List[str]): The list of dataset fiels to use as columns.
         totals (bool): Set to True to get totals by row and column
+        percentages: add percentages by ``rows`` or ``columns``, or None to not add percentages.
+        format: whether to format the numbers.
 
     Returns:
         [pd.DataFrame]: A pivot table with the number of images for the selected labels.
     """
-    # Start with the fulll dataset
-    df = p.get_augmented_dataset()
-    p.fix_dataset(df)
-    df.drop('Path', axis='columns', inplace=True)  # make it smaller to increase performance
+    chexpert = cd.CheXpert()
+    chexpert.fix_dataset()
+    # make it smaller to increase performance
+    chexpert.df.drop('Path', axis='columns', inplace=True)
+    df = chexpert.df
 
     # Hack for https://github.com/streamlit/streamlit/issues/47
     # Streamlit does not support categorical values
     # This undoes the preprocessing code, setting the columns back to string
-    for c in [p.COL_SEX, p.COL_FRONTAL_LATERAL, p.COL_AP_PA, p.COL_AGE_GROUP,
-              p.COL_TRAIN_VALIDATION]:
+    for c in [cd.COL_SEX, cd.COL_FRONTAL_LATERAL, cd.COL_AP_PA, cd.COL_AGE_GROUP,
+              cd.COL_TRAIN_VALIDATION]:
         df[c] = df[c].astype('object')
 
     # Keep the rows that have the selected labels
@@ -66,6 +71,15 @@ def get_images_count(labels: List[str], rows: List[str], columns: List[str],
                          margins=totals, margins_name=TOTAL, dropna=False)
     pvt.fillna(0, inplace=True)
 
+    if percentages in ['rows', 'columns']:
+        pvt = du.merge_percentages(pvt, percentages, TOTAL)
+
+    # Streamlit does not yet support formatting for multiindex dataframes
+    # It will be added with https://github.com/streamlit/streamlit/issues/956
+    # Until that issue is resolved, we need to format the numbers ourselves
+    if format:
+        pvt = pvt.applymap(lambda x: '{:,.0f}'.format(x))
+
     return pvt
 
 
@@ -80,7 +94,7 @@ def get_labels() -> List[str]:
     Returns:
         List[str]: List of labels to show to the user.
     """
-    labels = sorted(p.COL_LABELS)
+    labels = sorted(cd.COL_LABELS)
     labels.insert(0, ALL_LABELS)
     return labels
 
@@ -118,7 +132,7 @@ def show_graph(df_agg: pd.DataFrame):
 
 st.set_page_config(page_title='CheXpert Explorer')
 
-ROW_COLUMNS = [p.COL_SEX, p.COL_AGE_GROUP, p.COL_TRAIN_VALIDATION, p.COL_FRONTAL_LATERAL]
+ROW_COLUMNS = [cd.COL_SEX, cd.COL_AGE_GROUP, cd.COL_TRAIN_VALIDATION, cd.COL_FRONTAL_LATERAL]
 rows = st.sidebar.multiselect('Select rows', ROW_COLUMNS)
 columns = st.sidebar.multiselect('Select columns', ROW_COLUMNS)
 
@@ -141,18 +155,11 @@ else:
         adjusted_labels.remove(ALL_LABELS)
 
     totals = True
-    df_agg = get_images_count(adjusted_labels, rows, columns, totals=totals)
+    df_agg = get_images_count(adjusted_labels, rows, columns, totals=totals,
+                              percentages=percentages.lower(), format=True)
+    df_agg = df_agg.copy()  # copy to avoid Streamlit caching warning
     if df_agg.empty:
         st.write('There are no images with this combination of filters.')
     else:
-        pct_lower = percentages.lower()
-        if pct_lower in ['rows', 'columns']:
-            df_agg = du.merge_percentages(df_agg, pct_lower, TOTAL)
-
-        # Streamlit does not yet support formatting for multiindex dataframes
-        # It will be added with https://github.com/streamlit/streamlit/issues/956
-        # Until that issue is resolved, we need to format the numbers ourselves
-        df_agg = df_agg.applymap(lambda x: '{:,.0f}'.format(x))
-
         st.table(df_agg)
         show_graph(get_images_count(adjusted_labels, rows, columns, totals=False))
