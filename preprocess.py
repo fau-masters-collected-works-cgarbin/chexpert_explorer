@@ -1,7 +1,7 @@
 """Make it easier to work with the dataset.
 
-Create one .csv file that combines the train.csv and valid.csv, then augments the dataset. The
-combined CSV appends the following columns to the existing dataset columns:
+Create one DataFrame that combines the train.csv and valid.csv files, then augments it. The combined
+DataFrame appends the following columns to the existing dataset columns:
 
 - Patient number
 - Study number
@@ -12,9 +12,7 @@ combined CSV appends the following columns to the existing dataset columns:
 It also normalizes the labels to 0, 1, and -1 by converting floating point labels to integer (e.g.
 0.0 to 0) and by filling in empty label columns with 0.
 
-The code assumes that the dataset has been uncompressed into the same directory this file is in.
-
-Usage: python3 -m preprocess > chexpert.csv
+Using from the command line: python3 -m preprocess > chexpert.csv
 
 From another module: import this module and call the public function.
 """
