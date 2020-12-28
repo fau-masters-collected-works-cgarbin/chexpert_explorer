@@ -2,11 +2,12 @@
 
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
 import chexpert_dataset as cd
 
 sns.set_style("whitegrid")
-sns.set_palette("Set3", 6, 0.75)
+sns.set_palette("Set2", 4, 0.75)
 
 pd.options.display.float_format = '{:,.1f}'.format
 
@@ -15,7 +16,7 @@ IMAGES = 'Images'
 
 @st.cache
 def get_dataset() -> pd.DataFrame:
-    """Get a slimmed down versio of the dataset.
+    """Get a slimmed down version of the dataset.
 
     Implemented as a separate function to take advantage of Streamlit's caching.
 
@@ -38,38 +39,73 @@ def get_dataset() -> pd.DataFrame:
     return df
 
 
+st.set_page_config(page_title='CheXpert Statistics')
+
 df = get_dataset()
 
-# ADD UNIT TESTS
+st.write('Number of patients and images in the training and validation sets')
+stats = df.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+st.write(stats)
 
-# The number of images per patient/study
-st.write('Images per patient/study')
-df_psi = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID, cd.COL_STUDY_NUMBER],
-                    as_index=False).agg(Images=(cd.COL_PATIENT_ID, 'count'))
-st.dataframe(df_psi)
+st.write('Same as above, split by sex')
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=False).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+st.write(stats)
 
+sns.catplot(y='Patients', x='Sex', col=cd.COL_TRAIN_VALIDATION, data=stats,
+            kind='bar', sharey=False)
+st.pyplot(plt)
+sns.catplot(y='Images', x='Sex', col=cd.COL_TRAIN_VALIDATION, data=stats,
+            kind='bar', sharey=False)
+st.pyplot(plt)
 
-dfx = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID, cd.COL_STUDY_NUMBER],
-                 as_index=True).agg(Images=(cd.COL_PATIENT_ID, 'count'))
-st.dataframe(dfx)
+st.write('Number of studies per patient')
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False).agg(
+    Studies=(cd.COL_STUDY_NUMBER, pd.Series.nunique))
+summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
+    Minimum=('Studies', 'min'),
+    Maximum=('Studies', 'max'),
+    Mean=('Studies', 'mean'),
+    Median=('Studies', 'median'),
+    Std=('Studies', 'std'))
+st.write(summary)
+st.write('Number of studies per quantile')
+summary = stats[[cd.COL_TRAIN_VALIDATION, 'Studies']].groupby(
+    [cd.COL_TRAIN_VALIDATION], as_index=True).quantile([0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
+st.write(summary.unstack().reset_index())
 
+plt.clf()
+ax = sns.countplot(x='Studies', data=stats, color='gray')
+sns.despine(ax=ax)
+ax.set(yscale="log")
+plt.xticks(rotation=90)
+plt.xlabel('Number of studies')
+plt.ylabel('Number of patients (log)')
+st.pyplot(plt)
 
-# Statistics for images/study
-st.write('Images per study')
-df_is_stats = df_psi.groupby(cd.COL_TRAIN_VALIDATION, as_index=False).agg(
-    Minimum=(IMAGES, 'min'), Maximum=(IMAGES, 'max'), Std=(IMAGES, 'std'))
-st.write(df_is_stats)
+st.write('Number of images per patient')
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False).agg(
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
+    Minimum=('Images', 'min'),
+    Maximum=('Images', 'max'),
+    Mean=('Images', 'mean'),
+    Median=('Images', 'median'),
+    Std=('Images', 'std'))
+st.write(summary)
+st.write('Number of images per quantile')
+summary = stats[[cd.COL_TRAIN_VALIDATION, 'Images']].groupby(
+    [cd.COL_TRAIN_VALIDATION], as_index=True).quantile([0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
+st.write(summary.unstack().reset_index())
 
-dfx2 = dfx.groupby(cd.COL_TRAIN_VALIDATION, as_index=True).agg(
-    Minimum=(IMAGES, 'min'), Maximum=(IMAGES, 'max'), Std=(IMAGES, 'std'))
-st.write(dfx2)
-
-
-st.write('Images per train/validate set')
-df_is_counts = df_psi.groupby([cd.COL_TRAIN_VALIDATION, IMAGES], as_index=False).agg(
-    Count=(IMAGES, 'count'))
-st.write(df_is_counts)
-
-dfx3 = dfx.groupby([cd.COL_TRAIN_VALIDATION, IMAGES], as_index=True).agg(
-    Count=(IMAGES, 'count'))
-st.write(dfx3)
+plt.clf()
+ax = sns.countplot(x='Images', data=stats, color='gray')
+sns.despine(ax=ax)
+ax.set(yscale="log")
+plt.xticks(rotation=90)
+plt.xlabel('Number of images')
+plt.ylabel('Number of patients (log)')
+st.pyplot(plt)
