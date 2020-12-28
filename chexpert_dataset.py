@@ -28,10 +28,10 @@ COL_PATIENT_ID = 'Patient ID'
 COL_STUDY_NUMBER = 'Study Number'
 COL_VIEW_NUMBER = 'View Number'
 COL_AGE_GROUP = 'Age Group'
-COL_TRAIN_VALIDATION = 'Train/Validation'
+COL_TRAIN_VALIDATION = 'Training/Validation'
 
 # Values of columns added with this code
-TRAIN = 'Train'
+TRAIN = 'Training'
 VALIDATION = 'Validation'
 
 # Other useful constants
