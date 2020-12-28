@@ -9,8 +9,6 @@ import chexpert_dataset as cd
 sns.set_style("whitegrid")
 sns.set_palette("Set2", 4, 0.75)
 
-pd.options.display.float_format = '{:,.1f}'.format
-
 IMAGES = 'Images'
 
 
