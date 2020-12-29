@@ -42,9 +42,9 @@ COL_TRAIN_VALIDATION = 'Training/Validation'
 TRAINING = 'Training'
 VALIDATION = 'Validation'
 
-COL_LABELS_PATHOLOGY = ['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
-                        'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
-                        'Pneumothorax', 'Pleural Effusion', 'Pleural Other']
+COL_LABELS_PATHOLOGY = sorted(['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
+                               'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
+                               'Pneumothorax', 'Pleural Effusion', 'Pleural Other'])
 COL_LABELS_OTHER = ['No Finding', 'Fracture', 'Support Devices']
 COL_LABELS_ALL = COL_LABELS_PATHOLOGY + COL_LABELS_OTHER
 

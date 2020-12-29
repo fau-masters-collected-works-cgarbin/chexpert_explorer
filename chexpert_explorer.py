@@ -94,7 +94,7 @@ def get_labels() -> List[str]:
     Returns:
         List[str]: List of labels to show to the user.
     """
-    labels = cd.COL_LABELS_OTHER + sorted(cd.COL_LABELS_PATHOLOGY)
+    labels = cd.COL_LABELS_OTHER + cd.COL_LABELS_PATHOLOGY
     labels.insert(0, ALL_LABELS)
     return labels
 
