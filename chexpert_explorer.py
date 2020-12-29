@@ -87,14 +87,14 @@ def get_images_count(labels: List[str], rows: List[str], columns: List[str],
 def get_labels() -> List[str]:
     """Get a list of labels to show to the user, extracted from the dataset column names.
 
-    Labels are returned in alphabetical order. An explicit option to select all labels is added as
-    the first entry (even though selecting no labels means "show all", this option makes it clear to
-    the user).
+    Labels are returned with other findings at the other, followed by pathologies in alphabetical
+    order. An explicit option to select all labels is added as the first entry (even though
+    selecting no labels means "show all", this option makes it clear to the user).
 
     Returns:
         List[str]: List of labels to show to the user.
     """
-    labels = sorted(cd.COL_LABELS)
+    labels = cd.COL_LABELS_OTHER + sorted(cd.COL_LABELS_PATHOLOGY)
     labels.insert(0, ALL_LABELS)
     return labels
 

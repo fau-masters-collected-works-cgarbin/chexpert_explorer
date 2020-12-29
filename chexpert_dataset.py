@@ -42,10 +42,11 @@ COL_TRAIN_VALIDATION = 'Training/Validation'
 TRAINING = 'Training'
 VALIDATION = 'Validation'
 
-# Other useful constants
-COL_LABELS = ['No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
-              'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis', 'Pneumothorax',
-              'Pleural Effusion', 'Pleural Other', 'Fracture', 'Support Devices']
+COL_LABELS_PATHOLOGY = ['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
+                        'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
+                        'Pneumothorax', 'Pleural Effusion', 'Pleural Other']
+COL_LABELS_OTHER = ['No Finding', 'Fracture', 'Support Devices']
+COL_LABELS_ALL = COL_LABELS_PATHOLOGY + COL_LABELS_OTHER
 
 
 class CheXpert:
