@@ -1,5 +1,11 @@
 """Make it easier to work with the CheXpert dataset.
 
+- Combine the training and validation sets into one DataFrame
+- Create explicit columns for patient ID, study nubmer, and view number, instead of enconding in
+  the path
+- Add a column for age groups
+- Adjust the column data types to reduce memory usage
+
 Using from the command line: ``python3 -m preprocess > chexpert.csv``
 
 From another module::
@@ -8,6 +14,9 @@ From another module::
     chexpert = cd.CheXpert()
     chexpert.fix_dataset() # optional
     chexpert.df.head()
+
+IMPORTANT: because we are using categories, set observed=True when using groupby with the
+categorical columns to avoid surprises (https://github.com/pandas-dev/pandas/issues/17594)
 """
 # pylint: disable=too-few-public-methods
 
