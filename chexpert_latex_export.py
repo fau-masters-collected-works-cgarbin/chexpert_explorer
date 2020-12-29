@@ -48,7 +48,7 @@ stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=True, 
 assert stats.loc[cd.TRAINING][IMAGES].sum() == cd.IMAGE_NUM_TRAINING
 assert stats[IMAGES].sum() == cd.IMAGE_NUM_TOTAL
 summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=True).agg(
-    Min=(IMAGES, 'min'), Max=(IMAGES, 'max'), Mean=(IMAGES, 'mean'), Median=(IMAGES, 'median'),
+    Min=(IMAGES, 'min'), Max=(IMAGES, 'max'), Median=(IMAGES, 'median'), Mean=(IMAGES, 'mean'),
     Std=(IMAGES, 'std'))
 summary.to_latex(buf=DIR_TABLES+name+'.tex',
                  float_format=FLOAT_FORMAT, index_names=False,
@@ -79,6 +79,8 @@ def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
         count = [len(df[df[label] == x]) for x in [1, 0, -1]]
         pct = [c*100/images_in_set for c in count]
         stats.loc[label] = [x for t in zip(count, pct) for x in t]
+    # Sanity check: images with no findings are either positibe or negative and must match the set
+    assert (stats.loc['No Finding']['Pos'] + stats.loc['No Finding']['Neg']) == images_in_set
     return stats
 
 
@@ -89,6 +91,7 @@ def generate_image_frequency_table(name: str, caption: str, set: set, file: str)
                            formatters=[INT_FORMAT, '{:.1%}'.format] * (stats.shape[1]//2),
                            float_format=FLOAT_FORMAT, index_names=True,
                            caption=caption, label='tab:' + name, position='h!')
+    # Change font size (no option for that in to_latex)
     table = table.replace('\\centering', '\\scriptsize\n\\centering')
     with open(file, 'w') as f:
         print(table, file=f)
@@ -100,4 +103,4 @@ generate_image_frequency_table(name, caption, cd.TRAINING, DIR_TABLES+name+'.tex
 
 name = 'label-frequency-validation'
 caption = 'Frequency of labels in the validation set'
-generate_image_frequency_table(name, caption, cd.TRAINING, DIR_TABLES+name+'.tex')
+generate_image_frequency_table(name, caption, cd.VALIDATION, DIR_TABLES+name+'.tex')
