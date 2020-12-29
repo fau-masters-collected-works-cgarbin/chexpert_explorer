@@ -178,7 +178,7 @@ class CheXpert:
             df[c] = df[c].astype('category')
         for c in [COL_AGE, COL_PATIENT_ID, COL_STUDY_NUMBER, COL_VIEW_NUMBER]:
             df[c] = df[c].astype('int32')
-        for c in COL_LABELS:
+        for c in COL_LABELS_ALL:
             df[c] = df[c].astype('int8')
 
         # A bare minimum amount of sanity checks
