@@ -163,6 +163,8 @@ class CheXpert:
 
         # Optimize memory usage: use categorical values and small integer when possible
         # https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+        # IMPORTANT: because we are using categories, set observed=True when using groupby with
+        # these columns to avoid surprises (https://github.com/pandas-dev/pandas/issues/17594)
         for c in [COL_SEX, COL_FRONTAL_LATERAL, COL_AP_PA, COL_AGE_GROUP, COL_TRAIN_VALIDATION]:
             df[c] = df[c].astype('category')
         for c in [COL_AGE, COL_PATIENT_ID, COL_STUDY_NUMBER, COL_VIEW_NUMBER]:

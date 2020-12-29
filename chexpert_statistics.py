@@ -42,13 +42,13 @@ st.set_page_config(page_title='CheXpert Statistics')
 df = get_dataset()
 
 st.write('Number of patients and images in the training and validation sets')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
+stats = df.groupby([cd.COL_TRAIN_VALIDATION], as_index=False, observed=True).agg(
     Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
     Images=(cd.COL_VIEW_NUMBER, 'count'))
 st.write(stats)
 
 st.write('Same as above, split by sex')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=False).agg(
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=False,  observed=True).agg(
     Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
     Images=(cd.COL_VIEW_NUMBER, 'count'))
 st.write(stats)
@@ -61,9 +61,9 @@ sns.catplot(y='Images', x='Sex', col=cd.COL_TRAIN_VALIDATION, data=stats,
 st.pyplot(plt)
 
 st.write('Number of studies per patient')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False).agg(
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False, observed=True).agg(
     Studies=(cd.COL_STUDY_NUMBER, pd.Series.nunique))
-summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
+summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False, observed=True).agg(
     Minimum=('Studies', 'min'),
     Maximum=('Studies', 'max'),
     Mean=('Studies', 'mean'),
@@ -85,7 +85,7 @@ plt.ylabel('Number of patients (log)')
 st.pyplot(plt)
 
 st.write('Number of images per patient')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False).agg(
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False, observed=True).agg(
     Images=(cd.COL_VIEW_NUMBER, 'count'))
 summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
     Minimum=('Images', 'min'),
@@ -96,7 +96,8 @@ summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
 st.write(summary)
 st.write('Number of images per quantile')
 summary = stats[[cd.COL_TRAIN_VALIDATION, 'Images']].groupby(
-    [cd.COL_TRAIN_VALIDATION], as_index=True).quantile([0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
+    [cd.COL_TRAIN_VALIDATION], as_index=True, observed=True).quantile(
+        [0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack().reset_index())
 
 plt.clf()
