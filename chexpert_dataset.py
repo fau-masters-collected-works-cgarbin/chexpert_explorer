@@ -39,7 +39,7 @@ COL_AGE_GROUP = 'Age Group'
 COL_TRAIN_VALIDATION = 'Training/Validation'
 
 # Values of columns added with this code
-TRAIN = 'Training'
+TRAINING = 'Training'
 VALIDATION = 'Validation'
 
 # Other useful constants
@@ -161,7 +161,7 @@ class CheXpert:
 
         # Add the train/validation column
         self._logger.info('Adding train/validation')
-        df[COL_TRAIN_VALIDATION] = df.Path.apply(lambda x: TRAIN if 'train' in x else VALIDATION)
+        df[COL_TRAIN_VALIDATION] = df.Path.apply(lambda x: TRAINING if 'train' in x else VALIDATION)
 
         # Add the image information column
         if self._add_image_size:
