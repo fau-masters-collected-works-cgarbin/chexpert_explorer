@@ -70,3 +70,34 @@ summary.to_latex(buf=DIR_TABLES+name+'.tex',
                  float_format=FLOAT_FORMAT, index_names=True,
                  caption=caption, label='tab:' + name, position='h!')
 
+
+def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
+    labels = cd.COL_LABELS_OTHER + cd.COL_LABELS_PATHOLOGY
+    images_in_set = len(df[cd.COL_VIEW_NUMBER])
+    stats = pd.DataFrame(index=labels, columns=['Pos', '%', 'Neg', '%', 'Uncertain', '%'])
+    for label in labels:
+        count = [len(df[df[label] == x]) for x in [1, 0, -1]]
+        pct = [c*100/images_in_set for c in count]
+        stats.loc[label] = [x for t in zip(count, pct) for x in t]
+    return stats
+
+
+def generate_image_frequency_table(name: str, caption: str, set: set, file: str):
+    stats = label_image_frequency(df[df[cd.COL_TRAIN_VALIDATION] == set])
+    stats.rename(index={'Enlarged Cardiomediastinum': 'Enlarged Card.'}, inplace=True)
+    table = stats.to_latex(column_format='lrrrrrr',
+                           formatters=[INT_FORMAT, '{:.1%}'.format] * (stats.shape[1]//2),
+                           float_format=FLOAT_FORMAT, index_names=True,
+                           caption=caption, label='tab:' + name, position='h!')
+    table = table.replace('\\centering', '\\scriptsize\n\\centering')
+    with open(file, 'w') as f:
+        print(table, file=f)
+
+
+name = 'label-frequency-training'
+caption = 'Frequency of labels in the training set'
+generate_image_frequency_table(name, caption, cd.TRAINING, DIR_TABLES+name+'.tex')
+
+name = 'label-frequency-validation'
+caption = 'Frequency of labels in the validation set'
+generate_image_frequency_table(name, caption, cd.TRAINING, DIR_TABLES+name+'.tex')
