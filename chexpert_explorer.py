@@ -161,5 +161,5 @@ else:
     if df_agg.empty:
         st.write('There are no images with this combination of filters.')
     else:
-        st.table(df_agg)
+        st.write(df_agg)
         show_graph(get_images_count(adjusted_labels, rows, columns, totals=False))
