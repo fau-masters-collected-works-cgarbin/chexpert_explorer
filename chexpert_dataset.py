@@ -180,6 +180,11 @@ class CheXpert:
         for c in COL_LABELS:
             df[c] = df[c].astype('int8')
 
+        # A bare minimum amount of sanity checks
+        assert df[df[COL_TRAIN_VALIDATION] ==
+                  TRAINING][COL_PATIENT_ID].nunique() == PATIENT_NUM_TRAINING
+        assert df[COL_PATIENT_ID].nunique() == PATIENT_NUM_TOTAL
+
         return df
 
     def fix_dataset(self):
