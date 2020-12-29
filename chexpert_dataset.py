@@ -109,7 +109,7 @@ class CheXpert:
     def _get_augmented_chexpert(self) -> pd.DataFrame:
         """Get and augmented vresion of the CheXpert dataset.
 
-        Add columns described in the file header.
+        Add columns described in the file header and compacts the DataFrame to use less memory.
 
         Raises:
             RuntimeError: Cannot find the dataset directory and no directory was specified.
@@ -183,7 +183,7 @@ class CheXpert:
         # don't have another record where the sex could be copied from. Change it to "Female"
         # (it doesn't matter much which sex we pick because it is one record out of 200,000+).
         self.df.loc[self.df.Sex == 'Unknown', ['Sex']] = 'Female'
-        self.df.Sex.cat.remove_unused_categories(inplace=True)
+        self.df.Sex.cat.remove_unused_categories()
 
 
 def main():
