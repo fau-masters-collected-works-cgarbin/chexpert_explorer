@@ -60,7 +60,7 @@ sns.catplot(y='Images', x='Sex', col=cd.COL_TRAIN_VALIDATION, data=stats,
             kind='bar', sharey=False)
 st.pyplot(plt)
 
-st.write('Number of studies per patient')
+st.write('Summary statistics for studies per patient')
 stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False, observed=True).agg(
     Studies=(cd.COL_STUDY_NUMBER, pd.Series.nunique))
 summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False, observed=True).agg(
@@ -84,7 +84,7 @@ plt.xlabel('Number of studies')
 plt.ylabel('Number of patients (log)')
 st.pyplot(plt)
 
-st.write('Number of images per patient')
+st.write('Summary statistics for images per patient')
 stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False, observed=True).agg(
     Images=(cd.COL_VIEW_NUMBER, 'count'))
 summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
@@ -100,11 +100,19 @@ summary = stats[[cd.COL_TRAIN_VALIDATION, 'Images']].groupby(
         [0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack().reset_index())
 
+bins = [0, 1, 2, 3, 10, 100]
+bin_labels = ['1 image', '2 images', '3 images', '4 to 10 images', 'More than 10 images']
+IMAGE_SUMMARY = 'Number of images'
+stats[IMAGE_SUMMARY] = pd.cut(stats.Images, bins=bins,
+                              labels=bin_labels, right=True).astype('object')
+summary = stats.reset_index().groupby([IMAGE_SUMMARY], as_index=True, observed=True).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique))
+st.write(summary)
+
 plt.clf()
 ax = sns.countplot(x='Images', data=stats, color='gray')
 sns.despine(ax=ax)
 ax.set(yscale="log")
-plt.xticks(rotation=90)
 plt.xlabel('Number of images')
 plt.ylabel('Number of patients (log)')
 st.pyplot(plt)
