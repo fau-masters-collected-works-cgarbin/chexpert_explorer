@@ -17,6 +17,14 @@ import re
 import pandas as pd
 import imagesize
 
+# Dataset values that must hold when we manipulate it (groupby, pivot_table, filters, etc.)
+IMAGE_NUM_TRAINING = 223_414
+IMAGE_NUM_VALIDATION = 234
+IMAGE_NUM_TOTAL = IMAGE_NUM_VALIDATION + IMAGE_NUM_TRAINING
+PATIENT_NUM_TRAINING = 64_540
+PATIENT_NUM_VALIDATION = 200
+PATIENT_NUM_TOTAL = PATIENT_NUM_VALIDATION + PATIENT_NUM_TRAINING
+
 # Names of some commonly-used columns already in the dataset
 COL_SEX = 'Sex'
 COL_AGE = 'Age'
