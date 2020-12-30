@@ -3,8 +3,10 @@
 - Combine the training and validation sets into one DataFrame
 - Create explicit columns for patient ID, study nubmer, and view number, instead of enconding in
   the path
-- Add a column for age groups
+- Add a column for age groups to help  cross-sectional analysis
 - Adjust the column data types to reduce memory usage
+- The "no mention" encoded as an empty string in the validation set is converted to an integer
+  label for consistency and also to allow converting the columns to an integer, saving memory
 
 Using from the command line: ``python3 -m preprocess > chexpert.csv``
 
@@ -34,6 +36,20 @@ PATIENT_NUM_TRAINING = 64_540
 PATIENT_NUM_VALIDATION = 200
 PATIENT_NUM_TOTAL = PATIENT_NUM_VALIDATION + PATIENT_NUM_TRAINING
 
+# Labels
+LABEL_POSITIVE = 1
+LABEL_NEGATIVE = 0
+LABEL_UNCERTAIN = -1
+LABEL_NO_MENTION = -99
+
+# Observations (must match the names in the .csv files)
+OBSERVATION_NO_FINDING = 'No Finding'
+OBSERVATION_PATHOLOGY = sorted(['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
+                                'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
+                                'Pneumothorax', 'Pleural Effusion', 'Pleural Other'])
+OBSERVATION_OTHER = [OBSERVATION_NO_FINDING, 'Fracture', 'Support Devices']
+OBSERVATION_ALL = OBSERVATION_PATHOLOGY + OBSERVATION_OTHER
+
 # Names of some commonly-used columns already in the dataset
 COL_SEX = 'Sex'
 COL_AGE = 'Age'
@@ -50,13 +66,6 @@ COL_TRAIN_VALIDATION = 'Training/Validation'
 # Values of columns added with this code
 TRAINING = 'Training'
 VALIDATION = 'Validation'
-
-OBSERVATION_NO_FINDING = 'No Finding'
-OBSERVATION_PATHOLOGY = sorted(['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
-                                'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
-                                'Pneumothorax', 'Pleural Effusion', 'Pleural Other'])
-OBSERVATION_OTHER = [OBSERVATION_NO_FINDING, 'Fracture', 'Support Devices']
-OBSERVATION_ALL = OBSERVATION_PATHOLOGY + OBSERVATION_OTHER
 
 
 class CheXpert:
@@ -143,8 +152,10 @@ class CheXpert:
 
         df = pd.concat(pd.read_csv(os.path.join(directory, f)) for f in ['train.csv', 'valid.csv'])
 
-        # Normalize the labels: replace empty ones with zero
-        df.fillna(0, inplace=True)
+        # Convert the "no mention" label to an integer representation
+        # IMPORTANT: assumes this is the only case of NaN after reading the .csv files
+        self._logger.info('Converting "no mention" to integer')
+        df.fillna(LABEL_NO_MENTION, inplace=True)
 
         # Add the patient ID column by extracting it from the filename
         # Assume that the 'Path' column follows a well-defined format and extract from "patientNNN"
