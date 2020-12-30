@@ -48,7 +48,7 @@ OBSERVATION_PATHOLOGY = sorted(['Enlarged Cardiomediastinum', 'Cardiomegaly', 'L
                                 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
                                 'Pneumothorax', 'Pleural Effusion', 'Pleural Other'])
 OBSERVATION_OTHER = [OBSERVATION_NO_FINDING, 'Fracture', 'Support Devices']
-OBSERVATION_ALL = OBSERVATION_PATHOLOGY + OBSERVATION_OTHER
+OBSERVATION_ALL = OBSERVATION_OTHER + OBSERVATION_PATHOLOGY
 
 # Names of some commonly-used columns already in the dataset
 COL_SEX = 'Sex'
