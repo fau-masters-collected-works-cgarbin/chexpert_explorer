@@ -5,7 +5,8 @@ Export CheXpert statistics and graphs to be imported in LaTex documents.
 
 import os
 import re
-from numpy.core.defchararray import center
+from numpy.core.defchararray import center, count
+from numpy.lib.utils import source
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,7 +25,62 @@ PATIENTS = 'Patients'
 FLOAT_FORMAT = '{:0,.1f}'.format
 INT_FORMAT = '{:,}'.format
 
-SHORT_LABELS = {'Enlarged Cardiomediastinum': 'Enlarged Card.'}
+SHORT_OBSERVATION_NAMES = [('Enlarged Cardiomediastinum', 'Enlarged Card.')]
+
+
+def format_table(table: str, source_df: pd.DataFrame, file: str,
+                 short_observation_name: bool = False, text_width: bool = False,
+                 vertical_columns_names: bool = False, horizontal_separators: bool = False,
+                 font_size: str = None):
+    """Format a LaTeX table and saves it to a file.
+
+    Args:
+        table (str): The LaTeX table to be formatted.
+        source_df (pd.DataFrame): The DataFrame used to generated the table.
+        file (str): The base file name to save the table to. The directory and .tex extension are
+            added in this function.
+        short_observation_name (bool, optional): Shorten some of the observations names. Defaults
+            to False.
+        text_width (bool, optional): Use the full text width (for multi-column LaTeX templates).
+            Defaults to False.
+        vertical_columns_names (bool, optional): Rotate the columns names by 90 degrees. Defaults
+            to False.
+        horizontal_separators (bool, optional): Add horizontal separator every few rows to make it
+            easier to read (relies on observation names - does not work for other types of row
+            names). Defaults to False.
+        font_size (str, optional): Set the font size to the specified font, or use the default if
+            ``None`` is specified. Defaults to None.
+    """
+    if text_width:
+        table = table.replace('\\begin{tabular}',
+                              '\\begin{adjustbox}{width = 1\\textwidth}\n\\begin{tabular}')
+        table = table.replace('\\end{tabular}', '\\end{tabular}\n\\end{adjustbox}')
+        table = table.replace('{table}', '{table*}')
+
+    if vertical_columns_names:
+        # Assume columns names match the ones in the DataFrame
+        rotated = ' & ' + (' & ').join(['\\\\rotatebox{{90}}{{{}}}'.format(x)
+                                        for x in source_df.columns.tolist()])
+        table = re.sub(' & {}.* & {}'.format(source_df.columns[0], source_df.columns[-1]),
+                       rotated, table, count=1)
+
+    if horizontal_separators:
+        table = re.sub(r'^Consolidation',
+                       r'\\midrule[0.2pt]\nConsolidation', table, count=1, flags=re.MULTILINE)
+        table = re.sub(r'^Lung Opacity',
+                       r'\\midrule[0.2pt]\nLung Opacity', table, count=1, flags=re.MULTILINE)
+
+    if font_size is not None:
+        table = table.replace('\\centering', '\\{}\n\\centering'.format(font_size))
+
+    if short_observation_name:
+        # Not very memory efficient, but simple and sufficient for the text sizes we deal with
+        for replacement in SHORT_OBSERVATION_NAMES:
+            table = table.replace(*replacement)
+
+    with open(DIR_TABLES + file + '.tex', 'w') as f:
+        print(table, file=f)
+
 
 chexpert = cd.CheXpert()
 chexpert.fix_dataset()
@@ -95,10 +151,9 @@ def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
     return stats
 
 
-def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str, file: str,
-                                   pos_neg_only: bool = False):
+def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
+                                   pos_neg_only: bool = False) -> str:
     stats = label_image_frequency(df)
-    stats.rename(index=SHORT_LABELS, inplace=True)
     if pos_neg_only:
         # Assume pos/neg count and % are the first columns
         stats = stats.iloc[:, :4]
@@ -107,21 +162,17 @@ def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str, fi
                            formatters=[INT_FORMAT, '{:.1%}'.format] * (stats.shape[1]//2),
                            float_format=FLOAT_FORMAT, index_names=True,
                            caption=caption, label='tab:' + name, position='h!')
-    # Change font size (no option for that in to_latex)
-    table = table.replace('\\centering', '\\scriptsize\n\\centering')
-    with open(file, 'w') as f:
-        print(table, file=f)
+    format_table(table, stats, name, short_observation_name=True, font_size='small')
 
 
 name = 'label-frequency-training'
 caption = 'Frequency of labels in the training set'
-generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING], name, caption,
-                               DIR_TABLES+name+'.tex')
-
+table = generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING], name,
+                                       caption)
 name = 'label-frequency-validation'
 caption = 'Frequency of labels in the validation set'
-generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.VALIDATION], name, caption,
-                               DIR_TABLES+name+'.tex', pos_neg_only=True)
+table = generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.VALIDATION], name,
+                                       caption, pos_neg_only=True)
 
 # Co-incidence of labels
 
@@ -142,11 +193,7 @@ def label_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
 name = 'label-coincidence'
 caption = 'Coincidence of positive labels in the training set'
 stats = label_image_coincidence(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING])
-# Improve presentation
-# Shorten long label names
-stats.rename(index=SHORT_LABELS, inplace=True)
-stats.rename(columns=SHORT_LABELS, inplace=True)
-# Remove upper triangle (same as bottom triangle) to make it lighter
+# Remove upper triangle (same as bottom triangle) to make it easier to follow
 stats.values[np.triu_indices_from(stats, 0)] = ''
 # Remove first row and last column (they are now empty)
 stats.drop(labels=cd.OBSERVATION_NO_FINDING, axis='rows', inplace=True)
@@ -156,24 +203,5 @@ table = stats.to_latex(column_format='r' * (stats.shape[1]+1),  # +1 for index
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=caption, label='tab:' + name, position='h!')
 
-# Rotate column names
-before = ' & ' + (' & ').join(stats.columns.tolist())
-rotated = ' & ' + (' & ').join(['\\\\rotatebox{{90}}{{{}}}'.format(x)
-                                for x in stats.columns.tolist()])
-table = re.sub(' & {}.* & {}'.format(stats.columns[0], stats.columns[-1]), rotated, table, count=1)
-
-# Horizontal separators to  make it easier to read
-table = re.sub(r'^Consolidation',
-               r'\\midrule[0.2pt]\nConsolidation', table, count=1, flags=re.MULTILINE)
-table = re.sub(r'^Lung Opacity',
-               r'\\midrule[0.2pt]\nLung Opacity', table, count=1, flags=re.MULTILINE)
-
-# Use the page width
-table = table.replace('\\begin{tabular}',
-                      '\\begin{adjustbox}{width = 1\\textwidth}\n\\begin{tabular}')
-table = table.replace('\\end{tabular}', '\\end{tabular}\n\\end{adjustbox}')
-table = table.replace('{table}', '{table*}')
-
-file = DIR_TABLES+name+'.tex'
-with open(file, 'w') as f:
-    print(table, file=f)
+format_table(table, stats, name, text_width=True, short_observation_name=True,
+             vertical_columns_names=True, horizontal_separators=True)
