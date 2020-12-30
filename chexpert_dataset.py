@@ -51,11 +51,12 @@ COL_TRAIN_VALIDATION = 'Training/Validation'
 TRAINING = 'Training'
 VALIDATION = 'Validation'
 
-COL_LABELS_PATHOLOGY = sorted(['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
-                               'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
-                               'Pneumothorax', 'Pleural Effusion', 'Pleural Other'])
-COL_LABELS_OTHER = ['No Finding', 'Fracture', 'Support Devices']
-COL_LABELS_ALL = COL_LABELS_PATHOLOGY + COL_LABELS_OTHER
+OBSERVATION_NO_FINDING = 'No Finding'
+OBSERVATION_PATHOLOGY = sorted(['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
+                                'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
+                                'Pneumothorax', 'Pleural Effusion', 'Pleural Other'])
+OBSERVATION_OTHER = [OBSERVATION_NO_FINDING, 'Fracture', 'Support Devices']
+OBSERVATION_ALL = OBSERVATION_PATHOLOGY + OBSERVATION_OTHER
 
 
 class CheXpert:
@@ -187,7 +188,7 @@ class CheXpert:
             df[c] = df[c].astype('category')
         for c in [COL_AGE, COL_PATIENT_ID, COL_STUDY_NUMBER, COL_VIEW_NUMBER]:
             df[c] = df[c].astype('int32')
-        for c in COL_LABELS_ALL:
+        for c in OBSERVATION_ALL:
             df[c] = df[c].astype('int8')
 
         # A bare minimum amount of sanity checks
