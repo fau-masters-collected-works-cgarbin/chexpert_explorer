@@ -107,7 +107,7 @@ class CheXpert:
         self._logger.setLevel(logging.INFO if verbose else logging.ERROR)
 
     @staticmethod
-    def _find_directory() -> str:
+    def find_directory() -> str:
         """Determine the directory where the dataset is stored.
 
         There are two versions of the dataset, small and large. They are stored in
@@ -136,7 +136,7 @@ class CheXpert:
         Returns:
             pd.DataFrame: The dataset with the original and augmented columns.
         """
-        directory = CheXpert._find_directory() if self._directory is None else self._directory
+        directory = CheXpert.find_directory() if self._directory is None else self._directory
         if not directory:
             raise RuntimeError('Cannot find the CheXpert directory')
         self._logger.info('Using the dataset in %s', directory)
