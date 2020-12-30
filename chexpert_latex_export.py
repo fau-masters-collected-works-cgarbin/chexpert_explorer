@@ -4,7 +4,10 @@ Export CheXpert statistics and graphs to be imported in LaTex documents.
 """
 
 import os
+import re
+from numpy.core.defchararray import center
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import chexpert_dataset as cd
@@ -20,6 +23,8 @@ IMAGES = 'Images'
 PATIENTS = 'Patients'
 FLOAT_FORMAT = '{:0,.1f}'.format
 INT_FORMAT = '{:,}'.format
+
+SHORT_LABELS = {'Enlarged Cardiomediastinum': 'Enlarged Card.'}
 
 chexpert = cd.CheXpert()
 chexpert.fix_dataset()
@@ -70,23 +75,26 @@ summary.to_latex(buf=DIR_TABLES+name+'.tex',
                  float_format=FLOAT_FORMAT, index_names=True,
                  caption=caption, label='tab:' + name, position='h!')
 
+# Frequency of labels in the training and validation sets
+
 
 def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
-    labels = cd.COL_LABELS_OTHER + cd.COL_LABELS_PATHOLOGY
+    labels = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
     images_in_set = len(df[cd.COL_VIEW_NUMBER])
-    stats = pd.DataFrame(index=labels, columns=['Pos', '%', 'Neg', '%', 'Uncertain', '%'])
+    stats = pd.DataFrame(index=labels, columns=['1', '%', '0', '%', '-1', '%'])
     for label in labels:
         count = [len(df[df[label] == x]) for x in [1, 0, -1]]
         pct = [c*100/images_in_set for c in count]
         stats.loc[label] = [x for t in zip(count, pct) for x in t]
-    # Sanity check: images with no findings are either positibe or negative and must match the set
-    assert (stats.loc['No Finding']['Pos'] + stats.loc['No Finding']['Neg']) == images_in_set
+    # Sanity check: "no finding" must be either present or not present and must match the set
+    assert (stats.loc[cd.OBSERVATION_NO_FINDING]['1'] +
+            stats.loc[cd.OBSERVATION_NO_FINDING]['0']) == images_in_set
     return stats
 
 
-def generate_image_frequency_table(name: str, caption: str, set: set, file: str):
-    stats = label_image_frequency(df[df[cd.COL_TRAIN_VALIDATION] == set])
-    stats.rename(index={'Enlarged Cardiomediastinum': 'Enlarged Card.'}, inplace=True)
+def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str, file: str):
+    stats = label_image_frequency(df)
+    stats.rename(index=SHORT_LABELS, inplace=True)
     table = stats.to_latex(column_format='lrrrrrr',
                            formatters=[INT_FORMAT, '{:.1%}'.format] * (stats.shape[1]//2),
                            float_format=FLOAT_FORMAT, index_names=True,
@@ -99,8 +107,65 @@ def generate_image_frequency_table(name: str, caption: str, set: set, file: str)
 
 name = 'label-frequency-training'
 caption = 'Frequency of labels in the training set'
-generate_image_frequency_table(name, caption, cd.TRAINING, DIR_TABLES+name+'.tex')
+generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING], name, caption,
+                               DIR_TABLES+name+'.tex')
 
 name = 'label-frequency-validation'
 caption = 'Frequency of labels in the validation set'
-generate_image_frequency_table(name, caption, cd.VALIDATION, DIR_TABLES+name+'.tex')
+generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.VALIDATION], name, caption,
+                               DIR_TABLES+name+'.tex')
+
+# Co-incidence of labels
+
+
+def label_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
+    labels = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
+    stats = pd.DataFrame(index=labels, columns=labels)
+
+    for label in labels:
+        df_label = df[df[label] == 1]
+        coincidences = [len(df_label[df_label[x] == 1]) for x in labels]
+        stats.loc[label] = coincidences
+    # Sanity check: 'No Finding' should not coincide with a pathology
+    assert stats.loc[cd.OBSERVATION_NO_FINDING][cd.OBSERVATION_PATHOLOGY].sum() == 0
+    return stats
+
+
+name = 'label-coincidence'
+caption = 'Coincidence of labels in the training set'
+stats = label_image_coincidence(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING])
+# Improve presentation
+# Shorten long label names
+stats.rename(index=SHORT_LABELS, inplace=True)
+stats.rename(columns=SHORT_LABELS, inplace=True)
+# Remove upper triangle (same as bottom triangle) to make it lighter
+stats.values[np.triu_indices_from(stats, 0)] = ''
+# Remove first row and last column (they are now empty)
+stats.drop(labels=cd.OBSERVATION_NO_FINDING, axis='rows', inplace=True)
+stats.drop(labels=cd.OBSERVATION_PATHOLOGY[-1], axis='columns', inplace=True)
+
+table = stats.to_latex(column_format='r' * (stats.shape[1]+1),  # +1 for index
+                       float_format=FLOAT_FORMAT, index_names=True,
+                       caption=caption, label='tab:' + name, position='h!')
+
+# Rotate column names
+before = ' & ' + (' & ').join(stats.columns.tolist())
+rotated = ' & ' + (' & ').join(['\\\\rotatebox{{90}}{{{}}}'.format(x)
+                                for x in stats.columns.tolist()])
+table = re.sub(' & {}.* & {}'.format(stats.columns[0], stats.columns[-1]), rotated, table, count=1)
+
+# Horizontal separators to  make it easier to read
+table = re.sub(r'^Consolidation',
+               r'\\midrule[0.2pt]\nConsolidation', table, count=1, flags=re.MULTILINE)
+table = re.sub(r'^Lung Opacity',
+               r'\\midrule[0.2pt]\nLung Opacity', table, count=1, flags=re.MULTILINE)
+
+# Use the page width
+table = table.replace('\\begin{tabular}',
+                      '\\begin{adjustbox}{width = 1\\textwidth}\n\\begin{tabular}')
+table = table.replace('\\end{tabular}', '\\end{tabular}\n\\end{adjustbox}')
+table = table.replace('{table}', '{table*}')
+
+file = DIR_TABLES+name+'.tex'
+with open(file, 'w') as f:
+    print(table, file=f)
