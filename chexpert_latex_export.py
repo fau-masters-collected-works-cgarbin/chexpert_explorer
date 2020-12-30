@@ -79,23 +79,31 @@ summary.to_latex(buf=DIR_TABLES+name+'.tex',
 
 
 def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
-    labels = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
+    observations = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
     images_in_set = len(df[cd.COL_VIEW_NUMBER])
-    stats = pd.DataFrame(index=labels, columns=['1', '%', '0', '%', '-1', '%'])
-    for label in labels:
-        count = [len(df[df[label] == x]) for x in [1, 0, -1]]
+    ALL_LABELS = [cd.LABEL_POSITIVE, cd.LABEL_NEGATIVE, cd.LABEL_UNCERTAIN, cd.LABEL_NO_MENTION]
+    COL_NAMES = ['Pos', '%', 'Neg', '%', 'Unc', '%', 'No mention', '%']
+    stats = pd.DataFrame(index=observations, columns=COL_NAMES)
+    for obs in observations:
+        count = [len(df[df[obs] == x]) for x in ALL_LABELS]
         pct = [c*100/images_in_set for c in count]
-        stats.loc[label] = [x for t in zip(count, pct) for x in t]
-    # Sanity check: "no finding" must be either present or not present and must match the set
-    assert (stats.loc[cd.OBSERVATION_NO_FINDING]['1'] +
-            stats.loc[cd.OBSERVATION_NO_FINDING]['0']) == images_in_set
+        stats.loc[obs] = [x for t in zip(count, pct) for x in t]
+    # Sanity check: check a few columns for the number of images
+    cols_no_pct = [v for v in COL_NAMES if v != '%']
+    assert stats.loc[cd.OBSERVATION_NO_FINDING][cols_no_pct].sum() == images_in_set
+    assert stats.loc[cd.OBSERVATION_PATHOLOGY[1]][cols_no_pct].sum() == images_in_set
     return stats
 
 
-def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str, file: str):
+def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str, file: str,
+                                   pos_neg_only: bool = False):
     stats = label_image_frequency(df)
     stats.rename(index=SHORT_LABELS, inplace=True)
-    table = stats.to_latex(column_format='lrrrrrr',
+    if pos_neg_only:
+        # Assume pos/neg count and % are the first columns
+        stats = stats.iloc[:, :4]
+
+    table = stats.to_latex(column_format='l' + 'r' * stats.shape[1],
                            formatters=[INT_FORMAT, '{:.1%}'.format] * (stats.shape[1]//2),
                            float_format=FLOAT_FORMAT, index_names=True,
                            caption=caption, label='tab:' + name, position='h!')
@@ -113,7 +121,7 @@ generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING], n
 name = 'label-frequency-validation'
 caption = 'Frequency of labels in the validation set'
 generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.VALIDATION], name, caption,
-                               DIR_TABLES+name+'.tex')
+                               DIR_TABLES+name+'.tex', pos_neg_only=True)
 
 # Co-incidence of labels
 
