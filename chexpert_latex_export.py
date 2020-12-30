@@ -132,7 +132,7 @@ def label_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
 
 
 name = 'label-coincidence'
-caption = 'Coincidence of labels in the training set'
+caption = 'Coincidence of positive labels in the training set'
 stats = label_image_coincidence(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING])
 # Improve presentation
 # Shorten long label names
