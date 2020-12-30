@@ -17,12 +17,12 @@ import dfutils as du
 sns.set_style("whitegrid")
 sns.set_palette("Set3", 6, 0.75)
 
-ALL_LABELS = '(All)'
+ALL_OPTIONS = '(All)'
 TOTAL = 'Total'
 
 
 @st.cache
-def get_images_count(labels: List[str], rows: List[str], columns: List[str],
+def get_images_count(observations: List[str], rows: List[str], columns: List[str],
                      totals: bool = False, percentages: str = None,
                      format: bool = False) -> pd.DataFrame:
     """Get a pivot table with the image count for the selected filters.
@@ -32,8 +32,8 @@ def get_images_count(labels: List[str], rows: List[str], columns: List[str],
     (not to mention potential bugs that are obscure to debug).
 
     Args:
-        labels (List[str]): The list of labels to select from the dataset, or an empty list to
-            select all labels.
+        observations (List[str]): The list of observations with the positive label to select from
+            the dataset, or an empty list to select all observations with the positive label.
         rows (List[str]): The list of dataset fields to use as the rows (indices).
         columns (List[str]): The list of dataset fiels to use as columns.
         totals (bool): Set to True to get totals by row and column
@@ -41,7 +41,7 @@ def get_images_count(labels: List[str], rows: List[str], columns: List[str],
         format: whether to format the numbers.
 
     Returns:
-        [pd.DataFrame]: A pivot table with the number of images for the selected labels.
+        [pd.DataFrame]: A pivot table with the number of images for the selected filters.
     """
     chexpert = cd.CheXpert()
     chexpert.fix_dataset()
@@ -56,9 +56,9 @@ def get_images_count(labels: List[str], rows: List[str], columns: List[str],
               cd.COL_TRAIN_VALIDATION]:
         df[c] = df[c].astype('object')
 
-    # Keep the rows that have the selected labels
-    for label in labels:
-        df = df[df[label] == 1]
+    # Keep the rows that have images with the selected observations with positive label
+    for obs in observations:
+        df = df[df[obs] == cd.LABEL_POSITIVE]
 
     # Add a column to aggregate on
     df['count'] = 1
@@ -84,19 +84,19 @@ def get_images_count(labels: List[str], rows: List[str], columns: List[str],
 
 
 @st.cache
-def get_labels() -> List[str]:
-    """Get a list of labels to show to the user, extracted from the dataset column names.
+def get_observations() -> List[str]:
+    """Get a list of observations to show to the user, extracted from the dataset column names.
 
-    Labels are returned with other findings at the other, followed by pathologies in alphabetical
-    order. An explicit option to select all labels is added as the first entry (even though
-    selecting no labels means "show all", this option makes it clear to the user).
+    Observations are returned with other findings at the other, followed by pathologies in
+    alphabetical order. An explicit option to select all observations is added as the first entry
+    (even though selecting none means "show all", this option makes it clear to the user).
 
     Returns:
-        List[str]: List of labels to show to the user.
+        List[str]: List of observations to show to the user.
     """
-    labels = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
-    labels.insert(0, ALL_LABELS)
-    return labels
+    observations = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
+    observations.insert(0, ALL_OPTIONS)
+    return observations
 
 
 def show_graph(df_agg: pd.DataFrame):
@@ -136,11 +136,12 @@ ROW_COLUMNS = [cd.COL_SEX, cd.COL_AGE_GROUP, cd.COL_TRAIN_VALIDATION, cd.COL_FRO
 rows = st.sidebar.multiselect('Select rows', ROW_COLUMNS)
 columns = st.sidebar.multiselect('Select columns', ROW_COLUMNS)
 
-labels = st.sidebar.multiselect('Show count of images with these labels (select one or more)',
-                                get_labels(), default=ALL_LABELS)
-# Warn the user that "all labels" is ignored when used with other labels
-if ALL_LABELS in labels and len(labels) > 1:
-    st.sidebar.write('Ignoring "{}" when used with other labels'.format(ALL_LABELS))
+observations = st.sidebar.multiselect(
+    'Show count of images with positive label for these observations (select one or more)',
+    get_observations(), default=ALL_OPTIONS)
+# Warn the user that "all observations" is ignored when used with other observations
+if ALL_OPTIONS in observations and len(observations) > 1:
+    st.sidebar.write('Ignoring "{}" when used with other observations'.format(ALL_OPTIONS))
 
 percentages = st.sidebar.radio('Add percentages across', ('Rows', 'Columns', 'No percentages'))
 
@@ -149,17 +150,17 @@ if not rows:
 elif not set(rows).isdisjoint(columns):
     st.write('Rows and columns cannot have the same values')
 else:
-    # Remove the special "all labels" label if it's present in the list
-    adjusted_labels = labels[:]  # make a copy
-    if ALL_LABELS in adjusted_labels:
-        adjusted_labels.remove(ALL_LABELS)
+    # Remove the special "all observations" entry if it's present in the list
+    adjusted_observations = observations[:]  # make a copy
+    if ALL_OPTIONS in adjusted_observations:
+        adjusted_observations.remove(ALL_OPTIONS)
 
     totals = True
-    df_agg = get_images_count(adjusted_labels, rows, columns, totals=totals,
+    df_agg = get_images_count(adjusted_observations, rows, columns, totals=totals,
                               percentages=percentages.lower(), format=True)
     df_agg = df_agg.copy()  # copy to avoid Streamlit caching warning
     if df_agg.empty:
         st.write('There are no images with this combination of filters.')
     else:
         st.write(df_agg)
-        show_graph(get_images_count(adjusted_labels, rows, columns, totals=False))
+        show_graph(get_images_count(adjusted_observations, rows, columns, totals=False))
