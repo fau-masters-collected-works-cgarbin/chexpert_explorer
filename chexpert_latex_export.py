@@ -162,7 +162,8 @@ def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
                            formatters=[INT_FORMAT, '{:.1%}'.format] * (stats.shape[1]//2),
                            float_format=FLOAT_FORMAT, index_names=True,
                            caption=caption, label='tab:' + name, position='h!')
-    format_table(table, stats, name, short_observation_name=True, font_size='small')
+    format_table(table, stats, name, short_observation_name=True, text_width=not pos_neg_only,
+                 font_size='small')
 
 
 name = 'label-frequency-training'
