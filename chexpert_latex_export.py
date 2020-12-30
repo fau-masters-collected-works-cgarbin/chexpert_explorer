@@ -5,16 +5,9 @@ Export CheXpert statistics and graphs to be imported in LaTex documents.
 
 import os
 import re
-from numpy.core.defchararray import center, count
-from numpy.lib.utils import source
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import chexpert_dataset as cd
-
-sns.set_style("whitegrid")
-sns.set_palette("Set2", 4, 0.75)
 
 # Destination directories, with path separator at the end to simplify the code
 DIR_TABLES = os.path.join('..', 'chexpert-datasheet', 'tables') + os.sep
@@ -88,22 +81,22 @@ chexpert.fix_dataset()
 df = chexpert.df
 
 # Count of patients and images in the training and validation datasets
-name = 'patient-images-train-validate'
-caption = 'Number of patients and images'
+NAME = 'patient-images-train-validate'
+CAPTION = 'Number of patients and images'
 stats = df.groupby([cd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
     Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
     Images=(cd.COL_VIEW_NUMBER, 'count'))
 assert stats.loc[cd.TRAINING][PATIENTS].sum() == cd.PATIENT_NUM_TRAINING
 assert stats[PATIENTS].sum() == cd.PATIENT_NUM_TOTAL
 assert stats[IMAGES].sum() == cd.IMAGE_NUM_TOTAL
-stats.to_latex(buf=DIR_TABLES+name+'.tex',
+stats.to_latex(buf=DIR_TABLES+NAME+'.tex',
                formatters=[INT_FORMAT] * stats.shape[1],
                float_format=FLOAT_FORMAT, index_names=False,
-               caption=caption, label='tab:' + name, position='h!')
+               caption=CAPTION, label='tab:'+NAME, position='h!')
 
 # Summary statistic of images per patient
-name = 'patient-images-stats-summary'
-caption = 'Summary statistics for images per patient'
+NAME = 'patient-images-stats-summary'
+CAPTION = 'Summary statistics for images per patient'
 stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=True, observed=True).agg(
     Images=(cd.COL_VIEW_NUMBER, 'count'))
 assert stats.loc[cd.TRAINING][IMAGES].sum() == cd.IMAGE_NUM_TRAINING
@@ -111,13 +104,13 @@ assert stats[IMAGES].sum() == cd.IMAGE_NUM_TOTAL
 summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=True).agg(
     Min=(IMAGES, 'min'), Max=(IMAGES, 'max'), Median=(IMAGES, 'median'), Mean=(IMAGES, 'mean'),
     Std=(IMAGES, 'std'))
-summary.to_latex(buf=DIR_TABLES+name+'.tex',
+summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
                  float_format=FLOAT_FORMAT, index_names=False,
-                 caption=caption, label='tab:' + name, position='h!')
+                 caption=CAPTION, label='tab:'+NAME, position='h!')
 
 # Binned number of images per patient (continuing from above, where the number of images was added)
-name = 'patient-images-stats-distribution'
-caption = 'Distribution of images per patient'
+NAME = 'patient-images-stats-distribution'
+CAPTION = 'Distribution of images per patient'
 bins = [0, 1, 2, 3, 10, 100]
 bin_labels = ['1 image', '2 images', '3 images', '4 to 10 images', 'More than 10 images']
 IMAGE_SUMMARY = 'Number of images'
@@ -126,10 +119,10 @@ stats[IMAGE_SUMMARY] = pd.cut(stats.Images, bins=bins, labels=bin_labels, right=
 summary = stats.reset_index().groupby([IMAGE_SUMMARY], as_index=True, observed=True).agg(
     Patients=(cd.COL_PATIENT_ID, pd.Series.nunique))
 assert summary[PATIENTS].sum() == cd.PATIENT_NUM_TOTAL
-summary.to_latex(buf=DIR_TABLES+name+'.tex',
+summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
                  formatters=[INT_FORMAT] * summary.shape[1],
                  float_format=FLOAT_FORMAT, index_names=True,
-                 caption=caption, label='tab:' + name, position='h!')
+                 caption=CAPTION, label='tab:'+NAME, position='h!')
 
 # Frequency of labels in the training and validation sets
 
@@ -161,19 +154,19 @@ def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
     table = stats.to_latex(column_format='l' + 'r' * stats.shape[1],
                            formatters=[INT_FORMAT, '{:.1%}'.format] * (stats.shape[1]//2),
                            float_format=FLOAT_FORMAT, index_names=True,
-                           caption=caption, label='tab:' + name, position='h!')
+                           caption=caption, label='tab:'+name, position='h!')
     format_table(table, stats, name, short_observation_name=True, text_width=not pos_neg_only,
                  font_size='small')
 
 
-name = 'label-frequency-training'
-caption = 'Frequency of labels in the training set'
-table = generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING], name,
-                                       caption)
-name = 'label-frequency-validation'
-caption = 'Frequency of labels in the validation set'
-table = generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.VALIDATION], name,
-                                       caption, pos_neg_only=True)
+NAME = 'label-frequency-training'
+CAPTION = 'Frequency of labels in the training set'
+generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING], NAME, CAPTION)
+
+NAME = 'label-frequency-validation'
+CAPTION = 'Frequency of labels in the validation set'
+generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.VALIDATION], NAME, CAPTION,
+                               pos_neg_only=True)
 
 # Co-incidence of labels
 
@@ -191,8 +184,8 @@ def label_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
     return stats
 
 
-name = 'label-coincidence'
-caption = 'Coincidence of positive labels in the training set'
+NAME = 'label-coincidence'
+CAPTION = 'Coincidence of positive labels in the training set'
 stats = label_image_coincidence(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING])
 # Remove upper triangle (same as bottom triangle) to make it easier to follow
 stats.values[np.triu_indices_from(stats, 0)] = ''
@@ -202,7 +195,7 @@ stats.drop(labels=cd.OBSERVATION_PATHOLOGY[-1], axis='columns', inplace=True)
 
 table = stats.to_latex(column_format='r' * (stats.shape[1]+1),  # +1 for index
                        float_format=FLOAT_FORMAT, index_names=True,
-                       caption=caption, label='tab:' + name, position='h!')
+                       caption=CAPTION, label='tab:'+NAME, position='h!')
 
-format_table(table, stats, name, text_width=True, short_observation_name=True,
+format_table(table, stats, NAME, text_width=True, short_observation_name=True,
              vertical_columns_names=True, horizontal_separators=True)
