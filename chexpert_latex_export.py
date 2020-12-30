@@ -131,7 +131,7 @@ def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
     observations = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
     images_in_set = len(df[cd.COL_VIEW_NUMBER])
     ALL_LABELS = [cd.LABEL_POSITIVE, cd.LABEL_NEGATIVE, cd.LABEL_UNCERTAIN, cd.LABEL_NO_MENTION]
-    COL_NAMES = ['Pos', '%', 'Neg', '%', 'Unc', '%', 'No mention', '%']
+    COL_NAMES = ['Positive', '%', 'Negative', '%', 'Uncertain', '%', 'No mention', '%']
     stats = pd.DataFrame(index=observations, columns=COL_NAMES)
     for obs in observations:
         count = [len(df[df[obs] == x]) for x in ALL_LABELS]
@@ -150,13 +150,14 @@ def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
     if pos_neg_only:
         # Assume pos/neg count and % are the first columns
         stats = stats.iloc[:, :4]
+    font_size = 'small' if pos_neg_only else 'scriptsize'
 
     table = stats.to_latex(column_format='l' + 'r' * stats.shape[1],
                            formatters=[INT_FORMAT, '{:.1%}'.format] * (stats.shape[1]//2),
                            float_format=FLOAT_FORMAT, index_names=True,
                            caption=caption, label='tab:'+name, position='h!')
     format_table(table, stats, name, short_observation_name=True, text_width=not pos_neg_only,
-                 font_size='small')
+                 horizontal_separators=True, font_size=font_size)
 
 
 NAME = 'label-frequency-training'
