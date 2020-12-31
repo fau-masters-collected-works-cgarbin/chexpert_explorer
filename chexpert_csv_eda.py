@@ -44,13 +44,11 @@ df_valid = read_raw_csv(os.path.join(directory, 'valid.csv'))
 
 # All (unique) labels seen across all observations in both files
 all_labels = set()
-
 for data in [df_train, df_valid]:
     for obs in cd.OBSERVATION_ALL:
         labels = data[obs].unique()
         for label in labels:
             all_labels.add(label)
-        print('{}: {}'.format(obs, sorted(labels)))
 
 all_labels = sorted(all_labels)
 print('\nAll (unique) labels used in all files: {}'.format(sorted(all_labels)))
@@ -66,9 +64,8 @@ assert all_labels == KNOWN_LABELS
 def label_frequency(df: pd.DataFrame, labels: list) -> pd.DataFrame:
     stats = pd.DataFrame(index=cd.OBSERVATION_ALL, columns=labels)
     for obs in cd.OBSERVATION_ALL:
-        count = [len(df[df[obs] == x]) for x in labels]
+        count = [len(df[df[obs] == label]) for label in labels]
         stats.loc[obs] = count
-    # Sanity check: check a few columns for the number of images
     return stats
 
 
