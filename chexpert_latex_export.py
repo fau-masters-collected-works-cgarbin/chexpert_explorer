@@ -1,6 +1,9 @@
 """CheXpert LaTex exporter.
 
 Export CheXpert statistics and graphs to be imported in LaTex documents.
+
+The goal is to automate the generation of all tables stastical tables used in papers, so that they
+are accurate and can be regenerated quickly if the dataset is upgraded.
 """
 
 import os

@@ -15,7 +15,7 @@ def get_percentages(df: pd.DataFrame, totals: bool, percentages: str) -> pd.Data
         percentages (str): Whether to calculate percentages by ``rows`` or ``columns``.
 
     Returns:
-        pd.DataFrame: The DataFrame in percentages.
+        pd.DataFrame: A new DataFrame with numbers changed to percentages.
     """
     # Account for a "Totals" row if one was requested
     divider = 2 if totals else 1
@@ -30,8 +30,8 @@ def get_percentages(df: pd.DataFrame, totals: bool, percentages: str) -> pd.Data
 def get_flattened_df(df_agg: pd.DataFrame, reset_index=False) -> pd.DataFrame:
     """Get a flattened version of the DataFrame.
 
-    The flattened version of the DataFrames has only one column with values (the count of images).
-    The other columns in the DataFrame are descriptions of that value.
+    The flattened version of the DataFrames has only one column with values. The other columns in
+    the DataFrame are descriptions of that value.
 
     Args:
         df_agg (pd.DataFrame): The aggregrated DataFrame, created with pivot_table or groupby.
@@ -57,8 +57,7 @@ def merge_percentages(df: pd.DataFrame, pct_by: str, total_col_name: str = None)
     """Add percentages to a DataFrame that has counters.
 
     Args:
-        df (pd.DataFrame): The DataFrame that has a column with counters only (everything else is
-            an index)
+        df (pd.DataFrame): The DataFrame that has a column with counters.
         pct_by (str): Whether to calculates percentages by ``rows`` or ``columns``.
         total_col_name (str, optional): The name of a "totals" column, if there is one. Used to
             adjust the percentage calculation (avoids double counting). Defaults to None.
