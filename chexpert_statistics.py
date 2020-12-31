@@ -41,13 +41,13 @@ st.set_page_config(page_title='CheXpert Statistics')
 
 df = get_dataset()
 
-st.write('Number of patients and images in the training and validation sets')
+st.markdown('## Number of patients and images in the training and validation sets')
 stats = df.groupby([cd.COL_TRAIN_VALIDATION], as_index=False, observed=True).agg(
     Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
     Images=(cd.COL_VIEW_NUMBER, 'count'))
 st.write(stats)
 
-st.write('Same as above, split by sex')
+st.markdown('### Same as above, split by sex')
 stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=False,  observed=True).agg(
     Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
     Images=(cd.COL_VIEW_NUMBER, 'count'))
@@ -60,7 +60,7 @@ sns.catplot(y='Images', x='Sex', col=cd.COL_TRAIN_VALIDATION, data=stats,
             kind='bar', sharey=False)
 st.pyplot(plt)
 
-st.write('Summary statistics for studies per patient')
+st.markdown('## Summary statistics for studies per patient')
 stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False, observed=True).agg(
     Studies=(cd.COL_STUDY_NUMBER, pd.Series.nunique))
 summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False, observed=True).agg(
@@ -70,7 +70,8 @@ summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False, observed=True
     Median=('Studies', 'median'),
     Std=('Studies', 'std'))
 st.write(summary)
-st.write('Number of studies per quantile')
+
+st.markdown('### Number of studies per quantile')
 summary = stats[[cd.COL_TRAIN_VALIDATION, 'Studies']].groupby(
     [cd.COL_TRAIN_VALIDATION], as_index=True).quantile([0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack().reset_index())
@@ -84,7 +85,7 @@ plt.xlabel('Number of studies')
 plt.ylabel('Number of patients (log)')
 st.pyplot(plt)
 
-st.write('Summary statistics for images per patient')
+st.markdown('## Summary statistics for images per patient')
 stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False, observed=True).agg(
     Images=(cd.COL_VIEW_NUMBER, 'count'))
 summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
@@ -94,12 +95,14 @@ summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
     Median=('Images', 'median'),
     Std=('Images', 'std'))
 st.write(summary)
-st.write('Number of images per quantile')
+
+st.markdown('### Number of images per quantile')
 summary = stats[[cd.COL_TRAIN_VALIDATION, 'Images']].groupby(
     [cd.COL_TRAIN_VALIDATION], as_index=True, observed=True).quantile(
         [0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack().reset_index())
 
+st.markdown('### Binned number of images')
 bins = [0, 1, 2, 3, 10, 100]
 bin_labels = ['1 image', '2 images', '3 images', '4 to 10 images', 'More than 10 images']
 IMAGE_SUMMARY = 'Number of images'
@@ -113,6 +116,7 @@ plt.clf()
 ax = sns.countplot(x='Images', data=stats, color='gray')
 sns.despine(ax=ax)
 ax.set(yscale="log")
+plt.xticks(rotation=90)
 plt.xlabel('Number of images')
 plt.ylabel('Number of patients (log)')
 st.pyplot(plt)
