@@ -55,19 +55,6 @@ st.write(stats)
 # display columns names (it doesn't display index names), and 2) we can use as x/y in plots (I
 # didn't find a way to use indices as x/y directly)
 
-st.markdown('### Same as above, split by sex')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=False,  observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
-st.write(stats)
-
-sns.catplot(y='Patients', x='Sex', col=cd.COL_TRAIN_VALIDATION, data=stats,
-            kind='bar', sharey=False)
-st.pyplot(plt)
-sns.catplot(y='Images', x='Sex', col=cd.COL_TRAIN_VALIDATION, data=stats,
-            kind='bar', sharey=False)
-st.pyplot(plt)
-
 st.markdown('## Summary statistics for studies per patient')
 stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False, observed=True).agg(
     Studies=(cd.COL_STUDY_NUMBER, pd.Series.nunique))
@@ -127,4 +114,39 @@ ax.set(yscale="log")
 plt.xticks(rotation=90)
 plt.xlabel('Number of images')
 plt.ylabel('Number of patients (log)')
+st.pyplot(plt)
+
+st.markdown('## Demographics')
+
+st.markdown('### Number of patients and images by sex')
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=False,  observed=True).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+st.write(stats)
+
+st.markdown('### Number of patients and images by age group')
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP], as_index=True,  observed=True).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+st.write(stats)
+
+st.markdown('### Number of patients and images by sex and age group')
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP, cd.COL_SEX], as_index=True,
+                   observed=True).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+stats = stats.unstack(fill_value=0).reorder_levels([1, 0], axis='columns')
+st.write(stats)
+
+# Redo stats without index to use columns names in the plot
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP, cd.COL_SEX], as_index=False,
+                   observed=True).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+plt.clf()
+sns.catplot(y='Patients', x='Sex', hue=cd.COL_AGE_GROUP, col=cd.COL_TRAIN_VALIDATION, data=stats,
+            kind='bar', sharey=False)
+st.pyplot(plt)
+sns.catplot(y='Images', x='Sex', hue=cd.COL_AGE_GROUP, col=cd.COL_TRAIN_VALIDATION, data=stats,
+            kind='bar', sharey=False)
 st.pyplot(plt)
