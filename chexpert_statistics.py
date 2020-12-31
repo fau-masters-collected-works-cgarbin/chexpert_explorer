@@ -42,10 +42,14 @@ st.set_page_config(page_title='CheXpert Statistics')
 df = get_dataset()
 
 st.markdown('## Number of patients and images in the training and validation sets')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION], as_index=False, observed=True).agg(
+stats = df.groupby([cd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
     Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
     Images=(cd.COL_VIEW_NUMBER, 'count'))
 st.write(stats)
+
+# Note about "as_index=False": this makes the aggregations columns, not indices so that 1) Streamlit
+# display columns names (it doesn't display index names), and 2) we can use as x/y in plots (I
+# didn't find a way to use indices as x/y directly)
 
 st.markdown('### Same as above, split by sex')
 stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=False,  observed=True).agg(

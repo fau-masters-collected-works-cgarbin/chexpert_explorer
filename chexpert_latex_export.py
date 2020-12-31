@@ -181,7 +181,7 @@ def label_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
 
     for label in labels:
         df_label = df[df[label] == 1]
-        coincidences = [len(df_label[df_label[x] == 1]) for x in labels]
+        coincidences = [len(df_label[df_label[other_label] == 1]) for other_label in labels]
         stats.loc[label] = coincidences
     # Sanity check: 'No Finding' should not coincide with a pathology
     assert stats.loc[cd.OBSERVATION_NO_FINDING][cd.OBSERVATION_PATHOLOGY].sum() == 0
