@@ -42,40 +42,29 @@ if not directory:
 df_train = read_raw_csv(os.path.join(directory, 'train.csv'))
 df_valid = read_raw_csv(os.path.join(directory, 'valid.csv'))
 
-# All (unique) labels seen across all observations in both files
-all_labels = set()
-for data in [df_train, df_valid]:
-    for obs in cd.OBSERVATION_ALL:
-        labels = data[obs].unique()
-        for label in labels:
-            all_labels.add(label)
+# Count of labels per observation
+df_train_counts = df_train[cd.OBSERVATION_ALL].apply(pd.Series.value_counts).T
+df_valid_counts = df_valid[cd.OBSERVATION_ALL].apply(pd.Series.value_counts).T
 
-all_labels = sorted(all_labels)
-print('\nAll (unique) labels used in all files: {}'.format(sorted(all_labels)))
+train_labels = df_train_counts.columns.values
+valid_labels = df_valid_counts.columns.values
+
+print('\nCount of labels per observation - trainig set')
+print('Labels used: {}'.format(train_labels))
+print(df_train_counts)
+
+print('\nCount of labels per observation - validation set')
+print('Labels used: {}'.format(valid_labels))
+print(df_valid_counts)
 
 # Sanity check: verify that we found the labels we expected to find
 # If this assert fails we either have a mistake in the code or the labels have changed
 # If the labels have changed, we need to review all other places where we make assumptions about
 # the label values
-KNOWN_LABELS = ['', '-1.0', '0.0', '1.0']
-assert all_labels == KNOWN_LABELS
-
-
-def label_frequency(df: pd.DataFrame, labels: list) -> pd.DataFrame:
-    stats = pd.DataFrame(index=cd.OBSERVATION_ALL, columns=labels)
-    for obs in cd.OBSERVATION_ALL:
-        count = [len(df[df[obs] == label]) for label in labels]
-        stats.loc[obs] = count
-    return stats
-
-
-print('\nCount of labels per observation - trainig set')
-count_train = label_frequency(df_train, all_labels)
-print(count_train)
-
-print('\nCount of labels per observation - validation set')
-count_valid = label_frequency(df_valid, all_labels)
-print(count_valid)
+ALL_LABELS = ['', '-1.0', '0.0', '1.0']
+POS_NEG_LABELS = ['0.0', '1.0']
+assert train_labels.tolist() == ALL_LABELS
+assert valid_labels.tolist() == POS_NEG_LABELS
 
 # Sanity check: verify that we found the expected number of images in each set
 # If this assert fails, the code is wrong or the number of images in the traninig/validation set
@@ -84,7 +73,8 @@ print(count_valid)
 # the number of images
 
 # In the training set we expect to see all labels
-assert count_train.loc[cd.OBSERVATION_NO_FINDING][KNOWN_LABELS].sum() == cd.IMAGE_NUM_TRAINING
+assert df_train_counts.loc[cd.OBSERVATION_NO_FINDING][ALL_LABELS].sum() == cd.IMAGE_NUM_TRAINING
 
 # In the validation set we expect to see only the positive and negative labels
-assert count_valid.loc[cd.OBSERVATION_NO_FINDING][['1.0', '0.0']].sum() == cd.IMAGE_NUM_VALIDATION
+assert df_valid_counts.loc[cd.OBSERVATION_NO_FINDING][POS_NEG_LABELS].sum() == \
+    cd.IMAGE_NUM_VALIDATION
