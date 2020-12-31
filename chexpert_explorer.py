@@ -131,6 +131,7 @@ def show_graph(df_agg: pd.DataFrame):
 
 
 st.set_page_config(page_title='CheXpert Explorer')
+st.markdown('# CheXpert Explorer')
 
 ROW_COLUMNS = [cd.COL_SEX, cd.COL_AGE_GROUP, cd.COL_TRAIN_VALIDATION, cd.COL_FRONTAL_LATERAL]
 rows = st.sidebar.multiselect('Select rows', ROW_COLUMNS)

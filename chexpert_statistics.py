@@ -1,4 +1,7 @@
-"""CheXpert statistics."""
+"""CheXpert statistics.
+
+Different views into CheXpert to understand its composition.
+"""
 
 import streamlit as st
 import pandas as pd
@@ -38,6 +41,7 @@ def get_dataset() -> pd.DataFrame:
 
 
 st.set_page_config(page_title='CheXpert Statistics')
+st.markdown('# CheXpert Statistics')
 
 df = get_dataset()
 
