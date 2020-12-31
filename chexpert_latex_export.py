@@ -8,6 +8,7 @@ are accurate and can be regenerated quickly if the dataset is upgraded.
 
 import os
 import re
+from typing import List
 import pandas as pd
 import numpy as np
 import chexpert_dataset as cd
@@ -23,10 +24,13 @@ INT_FORMAT = '{:,}'.format
 
 SHORT_OBSERVATION_NAMES = [('Enlarged Cardiomediastinum', 'Enlarged Card.')]
 
+SEP_OBSERVATIONS = ['Consolidation', 'Lung Opacity']
+SEP_TRAIN_VALIDATION = ['Validation']
+
 
 def format_table(table: str, source_df: pd.DataFrame, file: str,
                  short_observation_name: bool = False, text_width: bool = False,
-                 vertical_columns_names: bool = False, horizontal_separators: bool = False,
+                 vertical_columns_names: bool = False, horizontal_separators: List[str] = None,
                  font_size: str = None):
     """Format a LaTeX table and saves it to a file.
 
@@ -41,9 +45,8 @@ def format_table(table: str, source_df: pd.DataFrame, file: str,
             Defaults to False.
         vertical_columns_names (bool, optional): Rotate the columns names by 90 degrees. Defaults
             to False.
-        horizontal_separators (bool, optional): Add horizontal separator every few rows to make it
-            easier to read (relies on observation names - does not work for other types of row
-            names). Defaults to False.
+        horizontal_separators (List[str], optional): Add a horizontal separator before lines that
+            start with these text.
         font_size (str, optional): Set the font size to the specified font, or use the default if
             ``None`` is specified. Defaults to None.
     """
@@ -60,11 +63,9 @@ def format_table(table: str, source_df: pd.DataFrame, file: str,
         table = re.sub(' & {}.* & {}'.format(source_df.columns[0], source_df.columns[-1]),
                        rotated, table, count=1)
 
-    if horizontal_separators:
-        table = re.sub(r'^Consolidation',
-                       r'\\midrule[0.2pt]\nConsolidation', table, count=1, flags=re.MULTILINE)
-        table = re.sub(r'^Lung Opacity',
-                       r'\\midrule[0.2pt]\nLung Opacity', table, count=1, flags=re.MULTILINE)
+    for sep in horizontal_separators:
+        table = re.sub(r'^{}'.format(sep), r'\\midrule[0.2pt]\n{}'.format(sep),
+                       table, count=1, flags=re.MULTILINE)
 
     if font_size is not None:
         table = table.replace('\\centering', '\\{}\n\\centering'.format(font_size))
@@ -139,6 +140,7 @@ def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
     for obs in observations:
         count = [len(df[df[obs] == x]) for x in ALL_LABELS]
         pct = [c*100/images_in_set for c in count]
+        # Interleave count and percentage columns
         stats.loc[obs] = [x for t in zip(count, pct) for x in t]
     # Sanity check: check a few columns for the number of images
     cols_no_pct = [v for v in COL_NAMES if v != '%']
@@ -160,7 +162,7 @@ def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
                            float_format=FLOAT_FORMAT, index_names=True,
                            caption=caption, label='tab:'+name, position='h!')
     format_table(table, stats, name, short_observation_name=True, text_width=not pos_neg_only,
-                 horizontal_separators=True, font_size=font_size)
+                 horizontal_separators=SEP_OBSERVATIONS, font_size=font_size)
 
 
 NAME = 'label-frequency-training'
@@ -200,6 +202,39 @@ stats.drop(labels=cd.OBSERVATION_PATHOLOGY[-1], axis='columns', inplace=True)
 table = stats.to_latex(column_format='r' * (stats.shape[1]+1),  # +1 for index
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!')
-
 format_table(table, stats, NAME, text_width=True, short_observation_name=True,
-             vertical_columns_names=True, horizontal_separators=True)
+             vertical_columns_names=True, horizontal_separators=SEP_OBSERVATIONS)
+
+
+NAME = 'demographic-by-set-sex'
+CAPTION = 'Images and patients by sex'
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=True,  observed=True).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
+                       float_format=FLOAT_FORMAT, index_names=True,
+                       caption=CAPTION, label='tab:'+NAME, position='h!')
+format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION)
+
+NAME = 'demographic-by-set-age-group'
+CAPTION = 'Images and patients by age group'
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP], as_index=True,  observed=True).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
+                       float_format=FLOAT_FORMAT, index_names=True,
+                       caption=CAPTION, label='tab:'+NAME, position='h!')
+format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, font_size='small')
+
+NAME = 'demographic-by-set-sex-age-group'
+CAPTION = 'Images and patients by sex and age group'
+stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP, cd.COL_SEX], as_index=True,
+                   observed=True).agg(
+    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cd.COL_VIEW_NUMBER, 'count'))
+stats = stats.unstack(fill_value=0).reorder_levels([1, 0], axis='columns')
+table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
+                       float_format=FLOAT_FORMAT, index_names=True,
+                       caption=CAPTION, label='tab:'+NAME, position='h!')
+format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, font_size='small',
+             text_width=True)
