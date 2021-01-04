@@ -97,23 +97,19 @@ class CheXpert:
             False.
             verbose (bool, optional): Turn verbose logging on/off. Defaults to off.
         """
-        self._init_logger(verbose)
-        self._directory = directory
-        self._add_image_size = add_image_size
+        self.__init_logger(verbose)
+        self.__directory = directory
+        self.__add_image_size = add_image_size
 
-        self.df = self._get_augmented_chexpert()
+        self.__df = self.__get_augmented_chexpert()
 
-    def _init_logger(self, verbose: bool):
-        """Init the logger.
+    @property
+    def df(self):
+        """Return the DataFrame that contains the training and validation test sets.
 
-        Args:
-            verbose (bool): Turn verbose logging on/off.
+        Make a copy before modifying it. This code does not return a copy to increase performace.
         """
-        self._ch = logging.StreamHandler()
-        self._ch.setFormatter(logging.Formatter('%(message)s'))
-        self._logger = logging.getLogger(__name__)
-        self._logger.addHandler(self._ch)
-        self._logger.setLevel(logging.INFO if verbose else logging.ERROR)
+        return self.__df
 
     @staticmethod
     def find_directory() -> str:
@@ -134,7 +130,30 @@ class CheXpert:
                 return entry.name
         return ''
 
-    def _get_augmented_chexpert(self) -> pd.DataFrame:
+    def fix_dataset(self):
+        """Fix issues with the dataset (in place).
+
+        See code for what is fixed.
+        """
+        # There is one record with sex 'Unknown'. There is only one image for that patient, so we
+        # don't have another record where the sex could be copied from. Change it to "Female"
+        # (it doesn't matter much which sex we pick because it is one record out of 200,000+).
+        self.df.loc[self.df.Sex == 'Unknown', ['Sex']] = 'Female'
+        self.df.Sex.cat.remove_unused_categories()
+
+    def __init_logger(self, verbose: bool):
+        """Init the logger.
+
+        Args:
+            verbose (bool): Turn verbose logging on/off.
+        """
+        self.__ch = logging.StreamHandler()
+        self.__ch.setFormatter(logging.Formatter('%(message)s'))
+        self.__logger = logging.getLogger(__name__)
+        self.__logger.addHandler(self._ch)
+        self.__logger.setLevel(logging.INFO if verbose else logging.ERROR)
+
+    def __get_augmented_chexpert(self) -> pd.DataFrame:
         """Get and augmented vresion of the CheXpert dataset.
 
         Add columns described in the file header and compacts the DataFrame to use less memory.
@@ -145,29 +164,29 @@ class CheXpert:
         Returns:
             pd.DataFrame: The dataset with the original and augmented columns.
         """
-        directory = CheXpert.find_directory() if self._directory is None else self._directory
+        directory = CheXpert.find_directory() if self.__directory is None else self.__directory
         if not directory:
             raise RuntimeError('Cannot find the CheXpert directory')
-        self._logger.info('Using the dataset in %s', directory)
+        self.__logger.info('Using the dataset in %s', directory)
 
         df = pd.concat(pd.read_csv(os.path.join(directory, f)) for f in ['train.csv', 'valid.csv'])
 
         # Convert the "no mention" label to an integer representation
         # IMPORTANT: assumes this is the only case of NaN after reading the .csv files
-        self._logger.info('Converting "no mention" to integer')
+        self.__logger.info('Converting "no mention" to integer')
         df.fillna(LABEL_NO_MENTION, inplace=True)
 
         # Add the patient ID column by extracting it from the filename
         # Assume that the 'Path' column follows a well-defined format and extract from "patientNNN"
-        self._logger.info('Adding patient ID')
+        self.__logger.info('Adding patient ID')
         df[COL_PATIENT_ID] = df.Path.apply(lambda x: int(x.split('/')[2][7:]))
 
         # Add the study number column, also assuming that the 'Path' column is well-defined
-        self._logger.info('Adding study number')
+        self.__logger.info('Adding study number')
         df[COL_STUDY_NUMBER] = df.Path.apply(lambda x: int(x.split('/')[3][5:]))
 
         # Add the view number column, also assuming that the 'Path' column is well-defined
-        self._logger.info('Adding view number')
+        self.__logger.info('Adding view number')
         view_regex = re.compile('/|_')
         df[COL_VIEW_NUMBER] = df.Path.apply(lambda x: int(re.split(view_regex, x)[4][4:]))
 
@@ -175,19 +194,19 @@ class CheXpert:
         # Best reference I found for that: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1794003/
         # We have only complete years, so we can't use 'newborn'
         # Also prefix with zero because visualizers sort by ASCII code, not numeric value
-        self._logger.info('Adding age group')
+        self.__logger.info('Adding age group')
         bins = [0, 2, 6, 13, 19, 45, 65, 80, 120]
         ages = ['(0-1) Infant', '(02-5) Preschool', '(06-12) Child', '(13-18) Adolescent',
                 '(19-44) Adult', '(45-64) Middle age', '(65-79) Aged', '(80+) Aged 80']
         df[COL_AGE_GROUP] = pd.cut(df.Age, bins=bins, labels=ages, right=False)
 
         # Add the train/validation column
-        self._logger.info('Adding train/validation')
+        self.__logger.info('Adding train/validation')
         df[COL_TRAIN_VALIDATION] = df.Path.apply(lambda x: TRAINING if 'train' in x else VALIDATION)
 
         # Add the image information column
-        if self._add_image_size:
-            self._logger.info('Adding image size (takes a few seconds)')
+        if self.__add_image_size:
+            self.__logger.info('Adding image size (takes a few seconds)')
             size = [imagesize.get(f) for f in df.Path]
             df[['Width', 'Height']] = pd.DataFrame(size, index=df.index)
 
@@ -208,17 +227,6 @@ class CheXpert:
         assert df[COL_PATIENT_ID].nunique() == PATIENT_NUM_TOTAL
 
         return df
-
-    def fix_dataset(self):
-        """Fix issues with the dataset (in place).
-
-        See code for what is fixed.
-        """
-        # There is one record with sex 'Unknown'. There is only one image for that patient, so we
-        # don't have another record where the sex could be copied from. Change it to "Female"
-        # (it doesn't matter much which sex we pick because it is one record out of 200,000+).
-        self.df.loc[self.df.Sex == 'Unknown', ['Sex']] = 'Female'
-        self.df.Sex.cat.remove_unused_categories()
 
 
 def main():
