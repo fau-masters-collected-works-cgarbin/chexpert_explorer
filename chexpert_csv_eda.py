@@ -23,7 +23,6 @@ def read_raw_csv(file: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A DataFrame with the file contents
     """
-
     # Read all observations columns as string to preserve their contents
     obs_dtype = {}
     for obs in cd.OBSERVATION_ALL:
@@ -41,6 +40,22 @@ if not directory:
 
 df_train = read_raw_csv(os.path.join(directory, 'train.csv'))
 df_valid = read_raw_csv(os.path.join(directory, 'valid.csv'))
+
+# Add patient and patient/study columns
+COL_PATIENT_ID = 'Patient ID'
+COL_PATIENT_STUDY = 'Patient/Study'
+for df in (df_train, df_valid):
+    df[COL_PATIENT_ID] = [s[2] for s in df['Path'].str.split('/')]
+    df[COL_PATIENT_STUDY] = ['{}-{}'.format(s[2], s[3]) for s in df['Path'].str.split('/')]
+
+print('Patients in the training set: {}'.format(df_train[COL_PATIENT_ID].nunique()))
+print('Patients in the validation set: {}'.format(df_valid[COL_PATIENT_ID].nunique()))
+
+print('Studies in the training set: {}'.format(df_train[COL_PATIENT_STUDY].nunique()))
+print('Studies in the validation set: {}'.format(df_valid[COL_PATIENT_STUDY].nunique()))
+
+print('Images in the training set: {}'.format(df_train.shape[0]))
+print('Images in the validation set: {}'.format(df_valid.shape[0]))
 
 # Count of labels per observation
 df_train_counts = df_train[cd.OBSERVATION_ALL].apply(pd.Series.value_counts).T
