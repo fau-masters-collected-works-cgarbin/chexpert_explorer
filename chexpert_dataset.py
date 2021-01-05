@@ -1,12 +1,13 @@
 """Make it easier to work with the CheXpert dataset.
 
-- Combine the training and validation sets into one DataFrame
+- Combine the training and validation sets into one DataFrame.
 - Create explicit columns for patient ID, study nubmer, and view number, instead of enconding in
-  the path
-- Add a column for age groups to help  cross-sectional analysis
-- Adjust the column data types to reduce memory usage
-- The "no mention" encoded as an empty string in the validation set is converted to an integer
-  label for consistency and also to allow converting the columns to an integer, saving memory
+  the path.
+- Add a column for age groups to help  cross-sectional analysis.
+- Adjust the column data types to reduce memory usage.
+- The "no mention" encoded as an empty string in the validation set is converted to an integer.
+  label for consistency and also to allow converting the columns to an integer, saving memory.
+- Add functions that compute statistics, e.g. number of images per patient.
 
 Using from the command line: ``python3 -m preprocess > chexpert.csv``
 
@@ -25,18 +26,24 @@ categorical columns to avoid surprises (https://github.com/pandas-dev/pandas/iss
 import logging
 import os
 import re
+import functools
 import pandas as pd
 import imagesize
 
 # Dataset values that must hold when we manipulate it (groupby, pivot_table, filters, etc.)
-IMAGE_NUM_TRAINING = 223_414
-IMAGE_NUM_VALIDATION = 234
-IMAGE_NUM_TOTAL = IMAGE_NUM_VALIDATION + IMAGE_NUM_TRAINING
+# Numbers come from analyzing the .csv files shipped with the dataset (see chexpert_csv_eda.py)
+# If `assert` start to fail in the code, either the code is broken or the dataset has changed
 PATIENT_NUM_TRAINING = 64_540
 PATIENT_NUM_VALIDATION = 200
 PATIENT_NUM_TOTAL = PATIENT_NUM_VALIDATION + PATIENT_NUM_TRAINING
+STUDY_NUM_TRAINING = 187_641
+STUDY_NUM_VALIDATION = 200
+STUDY_NUM_TOTAL = STUDY_NUM_TRAINING + STUDY_NUM_VALIDATION
+IMAGE_NUM_TRAINING = 223_414
+IMAGE_NUM_VALIDATION = 234
+IMAGE_NUM_TOTAL = IMAGE_NUM_VALIDATION + IMAGE_NUM_TRAINING
 
-# Labels
+# Labels as used in the DataFrame
 LABEL_POSITIVE = 1
 LABEL_NEGATIVE = 0
 LABEL_UNCERTAIN = -1
@@ -66,6 +73,18 @@ COL_TRAIN_VALIDATION = 'Training/Validation'
 # Values of columns added with this code
 TRAINING = 'Training'
 VALIDATION = 'Validation'
+
+# Index names, index values, and column names for functions that return DataFrames with statistics
+# Most statistics DataFrames are long (stacked) - these index names are combined into MultiIndex
+# indices as needed
+# Whenever possible, they match the name of the column used to group the statistics
+INDEX_NAME_SET = 'Set'
+INDEX_NAME_ITEM = 'Item'
+COL_COUNT = 'Count'
+COL_PERCENTAGE = '%'
+PATIENTS = 'Patients'
+IMAGES = 'Images'
+STUDIES = 'Studies'
 
 
 class CheXpert:
@@ -111,7 +130,53 @@ class CheXpert:
         """
         return self.__df
 
-    @staticmethod
+    @functools.lru_cache()
+    def patient_study_image_count(self, add_percentage=True):
+        # We need a column that is unique for patient and study
+        COL_PATIENT_STUDY = 'Patient/Study'
+        df = self.__df.copy()
+        df[COL_PATIENT_STUDY] = ['{}-{}'.format(p, s) for p, s in
+                                 zip(df[COL_PATIENT_ID], df[COL_STUDY_NUMBER])]
+
+        stats = df.groupby([COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
+            Patients=(COL_PATIENT_ID, pd.Series.nunique),
+            Studies=(COL_PATIENT_STUDY, pd.Series.nunique),
+            Images=(COL_VIEW_NUMBER, 'count')
+        )
+
+        assert stats[PATIENTS].sum() == PATIENT_NUM_TOTAL
+        assert stats[STUDIES].sum() == STUDY_NUM_TOTAL
+        assert stats[IMAGES].sum() == IMAGE_NUM_TOTAL
+
+        stats = pd.DataFrame(stats.stack())
+        stats = stats.rename(columns={0: COL_COUNT})
+        stats.index.names = [INDEX_NAME_SET, INDEX_NAME_ITEM]
+
+        def pct_for_item(set_item):
+            # Divide this set/item by the sum of the same item type in all sets, e.g. all patients
+            # for the training and validation sets - ignore the first level index and get all
+            # items of the same type (second level index)
+            # MultiIndex slicing: https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
+            all_items = stats.loc[(slice(None), set_item.name[1]), :].sum()
+            return 100 * set_item[COL_COUNT] / all_items[COL_COUNT].sum()
+
+        if add_percentage:
+            stats[COL_PERCENTAGE] = stats.apply(pct_for_item, axis='columns')
+
+        return stats
+
+    def fix_dataset(self):
+        """Fix issues with the dataset (in place).
+
+        See code for what is fixed.
+        """
+        # There is one record with sex 'Unknown'. There is only one image for that patient, so we
+        # don't have another record where the sex could be copied from. Change it to "Female"
+        # (it doesn't matter much which sex we pick because it is one record out of 200,000+).
+        self.df.loc[self.df.Sex == 'Unknown', ['Sex']] = 'Female'
+        self.df.Sex.cat.remove_unused_categories()
+
+    @ staticmethod
     def find_directory() -> str:
         """Determine the directory where the dataset is stored.
 
@@ -130,17 +195,6 @@ class CheXpert:
                 return entry.name
         return ''
 
-    def fix_dataset(self):
-        """Fix issues with the dataset (in place).
-
-        See code for what is fixed.
-        """
-        # There is one record with sex 'Unknown'. There is only one image for that patient, so we
-        # don't have another record where the sex could be copied from. Change it to "Female"
-        # (it doesn't matter much which sex we pick because it is one record out of 200,000+).
-        self.df.loc[self.df.Sex == 'Unknown', ['Sex']] = 'Female'
-        self.df.Sex.cat.remove_unused_categories()
-
     def __init_logger(self, verbose: bool):
         """Init the logger.
 
@@ -150,7 +204,7 @@ class CheXpert:
         self.__ch = logging.StreamHandler()
         self.__ch.setFormatter(logging.Formatter('%(message)s'))
         self.__logger = logging.getLogger(__name__)
-        self.__logger.addHandler(self._ch)
+        self.__logger.addHandler(self.__ch)
         self.__logger.setLevel(logging.INFO if verbose else logging.ERROR)
 
     def __get_augmented_chexpert(self) -> pd.DataFrame:
@@ -233,6 +287,7 @@ def main():
     """Separate main function to follow conventions and docstring to make pylint happy."""
     chexpert = CheXpert()
     chexpert.fix_dataset()
+    chexpert.patient_study_image_count()
     print(chexpert.df.to_csv(index=False))
 
 
