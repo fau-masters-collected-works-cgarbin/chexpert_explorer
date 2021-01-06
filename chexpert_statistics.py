@@ -32,24 +32,18 @@ st.markdown('# CheXpert Statistics')
 st.markdown('## Number of patients, studies, and images')
 stats = chexpert.patient_study_image_count().unstack().reorder_levels([1, 0], axis='columns')
 stats = stats.reindex((cd.PATIENTS, cd.STUDIES, cd.IMAGES), axis='columns', level=0)
-st.write(stats)
+st.write(stats.droplevel(1, axis='columns'))
 
-# Note about "as_index=False": this makes the aggregations columns, not indices so that 1) Streamlit
+# Note about reset_index(): this makes the aggregations columns, not indices so that 1) Streamlit
 # display columns names (it doesn't display index names), and 2) we can use as x/y in plots (I
 # didn't find a way to use indices as x/y directly)
 
 st.markdown('## Summary statistics for studies per patient')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False, observed=True).agg(
-    Studies=(cd.COL_STUDY_NUMBER, pd.Series.nunique))
-summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False, observed=True).agg(
-    Minimum=('Studies', 'min'),
-    Maximum=('Studies', 'max'),
-    Mean=('Studies', 'mean'),
-    Median=('Studies', 'median'),
-    Std=('Studies', 'std'))
+summary = chexpert.studies_summary_stats()
 st.write(summary)
 
 st.markdown('### Number of studies per quantile')
+stats = chexpert.studies_per_patient().reset_index()
 summary = stats[[cd.COL_TRAIN_VALIDATION, 'Studies']].groupby(
     [cd.COL_TRAIN_VALIDATION], as_index=True).quantile([0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack().reset_index())
@@ -64,17 +58,11 @@ st.write(summary.unstack().reset_index())
 # st.pyplot(plt)
 
 st.markdown('## Summary statistics for images per patient')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=False, observed=True).agg(
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
-summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=False).agg(
-    Minimum=('Images', 'min'),
-    Maximum=('Images', 'max'),
-    Mean=('Images', 'mean'),
-    Median=('Images', 'median'),
-    Std=('Images', 'std'))
+summary = chexpert.images_summary_stats()
 st.write(summary)
 
 st.markdown('### Number of images per quantile')
+stats = chexpert.images_per_patient().reset_index()
 summary = stats[[cd.COL_TRAIN_VALIDATION, 'Images']].groupby(
     [cd.COL_TRAIN_VALIDATION], as_index=True, observed=True).quantile(
         [0.25, 0.5, 0.75, 0.9, 0.95, 0.99])

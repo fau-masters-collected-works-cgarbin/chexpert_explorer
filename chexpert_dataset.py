@@ -29,7 +29,6 @@ import re
 import functools
 import pandas as pd
 import imagesize
-from pandas.core.frame import DataFrame
 
 # Dataset invariants that must hold when we manipulate it (groupby, pivot_table, filters, etc.)
 # Numbers come from analyzing the .csv files shipped with the dataset (see chexpert_csv_eda.py)
@@ -177,6 +176,71 @@ class CheXpert:
 
         return stats
 
+    @functools.lru_cache()
+    def studies_per_patient(self) -> pd.DataFrame:
+        """Calculate the number of studies for each patient.
+
+        Returns:
+            pd.DataFrame: Number of studies each patient has for each set (training/validation).
+        """
+        # The same study number may shows up more than once for the same patient (a study that has
+        # more than one image), thus we need the unique count of studies in this case
+        stats = self.__df.groupby([COL_TRAIN_VALIDATION, COL_PATIENT_ID], as_index=True,
+                                  observed=True).agg(
+            Studies=(COL_STUDY_NUMBER, pd.Series.nunique))
+        return stats
+
+    @functools.lru_cache()
+    def images_per_patient(self) -> pd.DataFrame:
+        """Calculate the number of images for each patient.
+
+        Returns:
+            pd.DataFrame: Number of images each patient has for each set (training/validation).
+        """
+        # Image (view) numbers may be repeated for the same patient (they are unique only within
+        # each study), thus in this case we need the overall count and not unique count
+        stats = self.__df.groupby([COL_TRAIN_VALIDATION, COL_PATIENT_ID], as_index=True,
+                                  observed=True).agg(
+            Images=(COL_VIEW_NUMBER, 'count'))
+        return stats
+
+    def __summary_stats_by_set(self, df: pd.DataFrame, column: str) -> pd.DataFrame:
+        """Calculate the summary statistics of a DataFrame that has counts."""
+        summary = df.groupby([COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
+            Minimum=(column, 'min'),
+            Maximum=(column, 'max'),
+            Median=(column, 'median'),
+            Mean=(column, 'mean'),
+            Std=(column, 'std'))
+        idx = pd.MultiIndex.from_product([summary.index, [column]], names=[
+                                         INDEX_NAME_SET, INDEX_NAME_ITEM])
+        summary.index = idx
+        return summary
+
+    @functools.lru_cache()
+    def studies_summary_stats(self) -> pd.DataFrame:
+        """Calculate summary statistics for the number of studies per patient.
+
+        Returns:
+            pd.DataFrame: Summary statistics for number of studies per patient for each set
+            (training/validation).
+        """
+        stats = self.studies_per_patient()
+        summary = self.__summary_stats_by_set(stats, STUDIES)
+        return summary
+
+    @functools.lru_cache()
+    def images_summary_stats(self) -> pd.DataFrame:
+        """Calculate summary statistics for the number of images per patient.
+
+        Returns:
+            pd.DataFrame: Summary statistics for number of images per patient for each set
+            (training/validation).
+        """
+        stats = self.images_per_patient()
+        summary = self.__summary_stats_by_set(stats, IMAGES)
+        return summary
+
     def fix_dataset(self):
         """Fix issues with the dataset (in place).
 
@@ -299,7 +363,6 @@ def main():
     """Separate main function to follow conventions and docstring to make pylint happy."""
     chexpert = CheXpert()
     chexpert.fix_dataset()
-    chexpert.patient_study_image_count()
     print(chexpert.df.to_csv(index=False))
 
 
