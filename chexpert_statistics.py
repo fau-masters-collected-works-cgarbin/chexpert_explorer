@@ -25,6 +25,9 @@ for c in [cd.COL_SEX, cd.COL_FRONTAL_LATERAL, cd.COL_AP_PA, cd.COL_AGE_GROUP,
           cd.COL_TRAIN_VALIDATION]:
     df[c] = df[c].astype('object')
 
+# Note about reset_index() used in some cases: this makes the aggregations columns, not indices so
+# that 1) Streamlit display columns names (it doesn't display index names), and 2) we can use as
+# x/y in plots (I didn't find a way to use indices as x/y directly)
 
 st.set_page_config(page_title='CheXpert Statistics')
 st.markdown('# CheXpert Statistics')
@@ -35,10 +38,6 @@ stats = chexpert.patient_study_image_count()
 stats = stats.unstack().reorder_levels([1, 0], axis='columns').droplevel(1, axis='columns')
 st.write(stats)
 
-# Note about reset_index(): this makes the aggregations columns, not indices so that 1) Streamlit
-# display columns names (it doesn't display index names), and 2) we can use as x/y in plots (I
-# didn't find a way to use indices as x/y directly)
-
 st.markdown('## Summary statistics for studies per patient')
 summary = chexpert.studies_summary_stats()
 st.write(summary)
@@ -47,7 +46,7 @@ st.markdown('### Number of studies per quantile')
 stats = chexpert.studies_per_patient().reset_index()
 summary = stats[[cd.COL_TRAIN_VALIDATION, 'Studies']].groupby(
     [cd.COL_TRAIN_VALIDATION], as_index=True).quantile([0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
-st.write(summary.unstack().reset_index())
+st.write(summary.unstack())
 
 # plt.clf()
 # ax = sns.countplot(x='Studies', data=stats, color='gray')
