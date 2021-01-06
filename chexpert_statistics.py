@@ -30,9 +30,10 @@ st.set_page_config(page_title='CheXpert Statistics')
 st.markdown('# CheXpert Statistics')
 
 st.markdown('## Number of patients, studies, and images')
-stats = chexpert.patient_study_image_count().unstack().reorder_levels([1, 0], axis='columns')
-stats = stats.reindex((cd.PATIENTS, cd.STUDIES, cd.IMAGES), axis='columns', level=0)
-st.write(stats.droplevel(1, axis='columns'))
+stats = chexpert.patient_study_image_count()
+# Long format, without the "Counts" column index
+stats = stats.unstack().reorder_levels([1, 0], axis='columns').droplevel(1, axis='columns')
+st.write(stats)
 
 # Note about reset_index(): this makes the aggregations columns, not indices so that 1) Streamlit
 # display columns names (it doesn't display index names), and 2) we can use as x/y in plots (I
