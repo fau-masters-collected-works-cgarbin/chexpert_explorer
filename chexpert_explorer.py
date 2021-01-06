@@ -10,7 +10,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
-import chexpert_dataset as cd
+import chexpert_dataset as cxd
 import dfutils as du
 
 
@@ -43,7 +43,7 @@ def get_images_count(observations: List[str], rows: List[str], columns: List[str
     Returns:
         [pd.DataFrame]: A pivot table with the number of images for the selected filters.
     """
-    chexpert = cd.CheXpert()
+    chexpert = cxd.CheXpertDataset()
     chexpert.fix_dataset()
     # make it smaller to increase performance
     chexpert.df.drop('Path', axis='columns', inplace=True)
@@ -52,13 +52,13 @@ def get_images_count(observations: List[str], rows: List[str], columns: List[str
     # Hack for https://github.com/streamlit/streamlit/issues/47
     # Streamlit does not support categorical values
     # This undoes the preprocessing code, setting the columns back to string
-    for c in [cd.COL_SEX, cd.COL_FRONTAL_LATERAL, cd.COL_AP_PA, cd.COL_AGE_GROUP,
-              cd.COL_TRAIN_VALIDATION]:
+    for c in [cxd.COL_SEX, cxd.COL_FRONTAL_LATERAL, cxd.COL_AP_PA, cxd.COL_AGE_GROUP,
+              cxd.COL_TRAIN_VALIDATION]:
         df[c] = df[c].astype('object')
 
     # Keep the rows that have images with the selected observations with positive label
     for obs in observations:
-        df = df[df[obs] == cd.LABEL_POSITIVE]
+        df = df[df[obs] == cxd.LABEL_POSITIVE]
 
     # Add a column to aggregate on
     df['count'] = 1
@@ -94,7 +94,7 @@ def get_observations() -> List[str]:
     Returns:
         List[str]: List of observations to show to the user.
     """
-    observations = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
+    observations = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
     observations.insert(0, ALL_OPTIONS)
     return observations
 
@@ -133,7 +133,7 @@ def show_graph(df_agg: pd.DataFrame):
 st.set_page_config(page_title='CheXpert Explorer')
 st.markdown('# CheXpert Explorer')
 
-ROW_COLUMNS = [cd.COL_SEX, cd.COL_AGE_GROUP, cd.COL_TRAIN_VALIDATION, cd.COL_FRONTAL_LATERAL]
+ROW_COLUMNS = [cxd.COL_SEX, cxd.COL_AGE_GROUP, cxd.COL_TRAIN_VALIDATION, cxd.COL_FRONTAL_LATERAL]
 rows = st.sidebar.multiselect('Select rows', ROW_COLUMNS)
 columns = st.sidebar.multiselect('Select columns', ROW_COLUMNS)
 

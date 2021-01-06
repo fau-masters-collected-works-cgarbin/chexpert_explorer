@@ -1,123 +1,156 @@
-"""CheXpert statistics.
+"""Calculate statistics for a CheXpert dataset.
 
-Different views into CheXpert to understand its composition.
+It works on the DataFrame, not on the CheXPertDataset class, to allow statistics on filtered data.
+
+Example::
+
+    import chexpert_dataset as cxd
+    import chexpert_statistics as cxs
+
+    # Get a ChexPert dataset
+    cxdata = cxd.CheXpertDataset()
+    cxdata.fix_dataset() # optional
+
+    # Calculate statistics on it
+    cxstats = cxs.ChexPer
+    ...
 """
-
-import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import chexpert_dataset as cd
+import chexpert_dataset as cxd
 
-sns.set_style("whitegrid")
-sns.set_palette("Set2", 4, 0.75)
-
+# Index names, index values, and column names for functions that return DataFrames with statistics
+# Most statistics DataFrames are long (stacked) - these index names are combined into MultiIndex
+# indices as needed
+# Whenever possible, they match the name of the column used to group the statistics
+INDEX_NAME_SET = 'Set'
+INDEX_NAME_ITEM = 'Item'
+COL_COUNT = 'Count'
+COL_PERCENTAGE = '%'
+PATIENTS = 'Patients'
 IMAGES = 'Images'
+STUDIES = 'Studies'
 
-chexpert = cd.CheXpert()
-chexpert.fix_dataset()
-df = chexpert.df  # Shortcut for smaller code
 
-# Hack for https://github.com/streamlit/streamlit/issues/47
-# Streamlit does not support categorical values
-# This undoes the preprocessing code, setting the columns back to string
-for c in [cd.COL_SEX, cd.COL_FRONTAL_LATERAL, cd.COL_AP_PA, cd.COL_AGE_GROUP,
-          cd.COL_TRAIN_VALIDATION]:
-    df[c] = df[c].astype('object')
+def _summary_stats_by_set(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    """Calculate the summary statistics of a DataFrame that has counts."""
+    summary = df.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
+        Minimum=(column, 'min'),
+        Maximum=(column, 'max'),
+        Median=(column, 'median'),
+        Mean=(column, 'mean'),
+        Std=(column, 'std'))
+    idx = pd.MultiIndex.from_product([summary.index, [column]], names=[
+        INDEX_NAME_SET, INDEX_NAME_ITEM])
+    summary.index = idx
+    return summary
 
-# Note about reset_index() used in some cases: this makes the aggregations columns, not indices so
-# that 1) Streamlit display columns names (it doesn't display index names), and 2) we can use as
-# x/y in plots (I didn't find a way to use indices as x/y directly)
 
-st.set_page_config(page_title='CheXpert Statistics')
-st.markdown('# CheXpert Statistics')
+def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) -> pd.DataFrame:
+    """Get count of patients, studies, and images, split by training/validation set.
 
-st.markdown('## Number of patients, studies, and images')
-stats = chexpert.patient_study_image_count()
-# Long format, without the "Counts" column index
-stats = stats.unstack().reorder_levels([1, 0], axis='columns').droplevel(1, axis='columns')
-st.write(stats)
+    Args:
+        df (pd.DataFrame): A CheXpert DataFrame.
+        add_percentage (bool, optional): Wheter to add percentage across sets. Defaults to True.
 
-st.markdown('## Summary statistics for studies per patient')
-summary = chexpert.studies_summary_stats()
-st.write(summary)
+    Returns:
+        pd.DataFrame: The DataFrame with the counts, in long format (only one column, with the
+            count, and a multiindex to identify set and item type).
+    """
+    # We need a column that is unique for patient and study
+    COL_PATIENT_STUDY = 'Patient/Study'
+    df = df.copy()  # preserve the caller's data
+    df[COL_PATIENT_STUDY] = ['{}-{}'.format(p, s) for p, s in
+                             zip(df[cxd.COL_PATIENT_ID], df[cxd.COL_STUDY_NUMBER])]
 
-st.markdown('### Number of studies per quantile')
-stats = chexpert.studies_per_patient().reset_index()
-summary = stats[[cd.COL_TRAIN_VALIDATION, 'Studies']].groupby(
-    [cd.COL_TRAIN_VALIDATION], as_index=True).quantile([0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
-st.write(summary.unstack())
+    stats = df.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
+        Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
+        Studies=(COL_PATIENT_STUDY, pd.Series.nunique),
+        Images=(cxd.COL_VIEW_NUMBER, 'count')
+    )
 
-# plt.clf()
-# ax = sns.countplot(x='Studies', data=stats, color='gray')
-# sns.despine(ax=ax)
-# ax.set(yscale="log")
-# plt.xticks(rotation=90)
-# plt.xlabel('Number of studies')
-# plt.ylabel('Number of patients (log)')
-# st.pyplot(plt)
+    assert stats[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL
+    assert stats[STUDIES].sum() == cxd.STUDY_NUM_TOTAL
+    assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
 
-st.markdown('## Summary statistics for images per patient')
-summary = chexpert.images_summary_stats()
-st.write(summary)
+    stats = pd.DataFrame(stats.stack())
+    stats = stats.rename(columns={0: COL_COUNT})
+    stats.index.names = [INDEX_NAME_SET, INDEX_NAME_ITEM]
 
-st.markdown('### Number of images per quantile')
-stats = chexpert.images_per_patient().reset_index()
-summary = stats[[cd.COL_TRAIN_VALIDATION, 'Images']].groupby(
-    [cd.COL_TRAIN_VALIDATION], as_index=True, observed=True).quantile(
-        [0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
-st.write(summary.unstack().reset_index())
+    def pct_for_item(one_set_one_item):
+        # Divide this set/item by the sum of the same item type in all sets, e.g. all patients
+        # for the training and validation sets - ignore the first level index and get all
+        # items of the same type (second level index)
+        # MultiIndex slicing: https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html # noqa
+        # and https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#using-slicers # noqa
+        # in particular
+        all_items_for_set = stats.loc[(slice(None), one_set_one_item.name[1]), :].sum()
+        return 100 * one_set_one_item[COL_COUNT] / all_items_for_set[COL_COUNT].sum()
 
-st.markdown('### Binned number of images')
-bins = [0, 1, 2, 3, 10, 100]
-bin_labels = ['1 image', '2 images', '3 images', '4 to 10 images', 'More than 10 images']
-IMAGE_SUMMARY = 'Number of images'
-stats[IMAGE_SUMMARY] = pd.cut(stats.Images, bins=bins,
-                              labels=bin_labels, right=True).astype('object')
-summary = stats.reset_index().groupby([IMAGE_SUMMARY], as_index=True, observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique))
-st.write(summary)
+    if add_percentage:
+        stats[COL_PERCENTAGE] = stats.apply(pct_for_item, axis='columns')
 
-# plt.clf()
-# ax = sns.countplot(x='Images', data=stats, color='gray')
-# sns.despine(ax=ax)
-# ax.set(yscale="log")
-# plt.xticks(rotation=90)
-# plt.xlabel('Number of images')
-# plt.ylabel('Number of patients (log)')
-# st.pyplot(plt)
+    return stats
 
-st.markdown('## Demographics')
 
-st.markdown('### Number of patients and images by sex')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=False,  observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
-st.write(stats)
+def studies_per_patient(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate the number of studies for each patient.
 
-st.markdown('### Number of patients and images by age group')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP], as_index=True,  observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
-st.write(stats)
+    Args:
+        df (pd.DataFrame): A CheXpert DataFrame.
 
-st.markdown('### Number of patients and images by sex and age group')
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP, cd.COL_SEX], as_index=True,
-                   observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
-stats = stats.unstack(fill_value=0).reorder_levels([1, 0], axis='columns')
-st.write(stats)
+    Returns:
+        pd.DataFrame: Number of studies each patient has for each set (training/validation).
+    """
+    # The same study number may shows up more than once for the same patient (a study that has
+    # more than one image), thus we need the unique count of studies in this case
+    stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_PATIENT_ID], as_index=True,
+                       observed=True).agg(
+        Studies=(cxd.COL_STUDY_NUMBER, pd.Series.nunique))
+    return stats
 
-# Redo stats without index to use columns names in the plot
-# stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP, cd.COL_SEX], as_index=False,
-#                    observed=True).agg(
-#     Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
-#     Images=(cd.COL_VIEW_NUMBER, 'count'))
-# plt.clf()
-# sns.catplot(y='Patients', x='Sex', hue=cd.COL_AGE_GROUP, col=cd.COL_TRAIN_VALIDATION, data=stats,
-#             kind='bar', sharey=False)
-# st.pyplot(plt)
-# sns.catplot(y='Images', x='Sex', hue=cd.COL_AGE_GROUP, col=cd.COL_TRAIN_VALIDATION, data=stats,
-#             kind='bar', sharey=False)
-# st.pyplot(plt)
+
+def images_per_patient(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate the number of images for each patient.
+
+    Args:
+        df (pd.DataFrame): A CheXpert DataFrame.
+
+    Returns:
+        pd.DataFrame: Number of images each patient has for each set (training/validation).
+    """
+    # Image (view) numbers may be repeated for the same patient (they are unique only within
+    # each study), thus in this case we need the overall count and not unique count
+    stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_PATIENT_ID], as_index=True,
+                       observed=True).agg(
+        Images=(cxd.COL_VIEW_NUMBER, 'count'))
+    return stats
+
+
+def studies_summary_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate summary statistics for the number of studies per patient.
+
+    Args:
+        df (pd.DataFrame): A CheXpert DataFrame.
+
+    Returns:
+        pd.DataFrame: Summary statistics for number of studies per patient for each set
+        (training/validation).
+    """
+    stats = studies_per_patient(df)
+    summary = _summary_stats_by_set(stats, STUDIES)
+    return summary
+
+
+def images_summary_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate summary statistics for the number of images per patient.
+
+    Args:
+        df (pd.DataFrame): A CheXpert DataFrame.
+
+    Returns:
+        pd.DataFrame: Summary statistics for number of images per patient for each set
+        (training/validation).
+    """
+    stats = images_per_patient(df)
+    summary = _summary_stats_by_set(stats, IMAGES)
+    return summary

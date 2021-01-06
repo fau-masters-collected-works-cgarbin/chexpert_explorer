@@ -3,8 +3,8 @@
 This is a tool to help understand the composition of the .csv files, e.g. how labels are used, in
 its raw format, before massaging the data.
 
-The main goal is to use it as a sanity check for the more complex code that manipulates the data,
-e.g. creates tables and other views.
+It analyzes the .csv files without the help of any other code to serve as ground truth for more
+complex code that manipulates the data, e.g. creates tables and other views.
 """
 import os
 import pandas as pd
@@ -34,7 +34,7 @@ def read_raw_csv(file: str) -> pd.DataFrame:
     return df
 
 
-directory = cd.CheXpert.find_directory()
+directory = cd.CheXpertDataset.find_directory()
 if not directory:
     raise RuntimeError('Cannot find the CheXpert directory')
 

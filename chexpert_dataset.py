@@ -14,9 +14,9 @@ Using from the command line: ``python3 -m preprocess > chexpert.csv``
 From another module::
 
     import chexpert_dataset as cd
-    chexpert = cd.CheXpert()
-    chexpert.fix_dataset() # optional
-    chexpert.df.head()
+    cxdata = cd.CheXpertDataset()
+    cxdata.fix_dataset() # optional
+    cxdata.df.head()
 
 IMPORTANT: because we are using categories, set observed=True when using groupby with the
 categorical columns to avoid surprises (https://github.com/pandas-dev/pandas/issues/17594)
@@ -26,7 +26,6 @@ categorical columns to avoid surprises (https://github.com/pandas-dev/pandas/iss
 import logging
 import os
 import re
-import functools
 import pandas as pd
 import imagesize
 
@@ -74,20 +73,8 @@ COL_TRAIN_VALIDATION = 'Training/Validation'
 TRAINING = 'Training'
 VALIDATION = 'Validation'
 
-# Index names, index values, and column names for functions that return DataFrames with statistics
-# Most statistics DataFrames are long (stacked) - these index names are combined into MultiIndex
-# indices as needed
-# Whenever possible, they match the name of the column used to group the statistics
-INDEX_NAME_SET = 'Set'
-INDEX_NAME_ITEM = 'Item'
-COL_COUNT = 'Count'
-COL_PERCENTAGE = '%'
-PATIENTS = 'Patients'
-IMAGES = 'Images'
-STUDIES = 'Studies'
 
-
-class CheXpert:
+class CheXpertDataset:
     """An augmented version of the CheXPert dataset.
 
     Create one DataFrame that combines the train.csv and valid.csv files, then augments it. The
@@ -129,117 +116,6 @@ class CheXpert:
         Make a copy before modifying it. This code does not return a copy to increase performace.
         """
         return self.__df
-
-    @functools.lru_cache()
-    def patient_study_image_count(self, add_percentage: bool = False) -> pd.DataFrame:
-        """Get count of patients, studies, and images, split by training/validation set.
-
-        Args:
-            add_percentage (bool, optional): Wheter to add percentage across sets. Defaults to True.
-
-        Returns:
-            pd.DataFrame: The DataFrame with the counts, in long format (only one column, with the
-                count, and a multiindex to identify set and item type).
-        """
-        # We need a column that is unique for patient and study
-        COL_PATIENT_STUDY = 'Patient/Study'
-        df = self.__df.copy()
-        df[COL_PATIENT_STUDY] = ['{}-{}'.format(p, s) for p, s in
-                                 zip(df[COL_PATIENT_ID], df[COL_STUDY_NUMBER])]
-
-        stats = df.groupby([COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
-            Patients=(COL_PATIENT_ID, pd.Series.nunique),
-            Studies=(COL_PATIENT_STUDY, pd.Series.nunique),
-            Images=(COL_VIEW_NUMBER, 'count')
-        )
-
-        assert stats[PATIENTS].sum() == PATIENT_NUM_TOTAL
-        assert stats[STUDIES].sum() == STUDY_NUM_TOTAL
-        assert stats[IMAGES].sum() == IMAGE_NUM_TOTAL
-
-        stats = pd.DataFrame(stats.stack())
-        stats = stats.rename(columns={0: COL_COUNT})
-        stats.index.names = [INDEX_NAME_SET, INDEX_NAME_ITEM]
-
-        def pct_for_item(one_set_one_item):
-            # Divide this set/item by the sum of the same item type in all sets, e.g. all patients
-            # for the training and validation sets - ignore the first level index and get all
-            # items of the same type (second level index)
-            # MultiIndex slicing: https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html # noqa
-            # and https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#using-slicers # noqa
-            # in particular
-            all_items_for_set = stats.loc[(slice(None), one_set_one_item.name[1]), :].sum()
-            return 100 * one_set_one_item[COL_COUNT] / all_items_for_set[COL_COUNT].sum()
-
-        if add_percentage:
-            stats[COL_PERCENTAGE] = stats.apply(pct_for_item, axis='columns')
-
-        return stats
-
-    @functools.lru_cache()
-    def studies_per_patient(self) -> pd.DataFrame:
-        """Calculate the number of studies for each patient.
-
-        Returns:
-            pd.DataFrame: Number of studies each patient has for each set (training/validation).
-        """
-        # The same study number may shows up more than once for the same patient (a study that has
-        # more than one image), thus we need the unique count of studies in this case
-        stats = self.__df.groupby([COL_TRAIN_VALIDATION, COL_PATIENT_ID], as_index=True,
-                                  observed=True).agg(
-            Studies=(COL_STUDY_NUMBER, pd.Series.nunique))
-        return stats
-
-    @functools.lru_cache()
-    def images_per_patient(self) -> pd.DataFrame:
-        """Calculate the number of images for each patient.
-
-        Returns:
-            pd.DataFrame: Number of images each patient has for each set (training/validation).
-        """
-        # Image (view) numbers may be repeated for the same patient (they are unique only within
-        # each study), thus in this case we need the overall count and not unique count
-        stats = self.__df.groupby([COL_TRAIN_VALIDATION, COL_PATIENT_ID], as_index=True,
-                                  observed=True).agg(
-            Images=(COL_VIEW_NUMBER, 'count'))
-        return stats
-
-    def __summary_stats_by_set(self, df: pd.DataFrame, column: str) -> pd.DataFrame:
-        """Calculate the summary statistics of a DataFrame that has counts."""
-        summary = df.groupby([COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
-            Minimum=(column, 'min'),
-            Maximum=(column, 'max'),
-            Median=(column, 'median'),
-            Mean=(column, 'mean'),
-            Std=(column, 'std'))
-        idx = pd.MultiIndex.from_product([summary.index, [column]], names=[
-                                         INDEX_NAME_SET, INDEX_NAME_ITEM])
-        summary.index = idx
-        return summary
-
-    @functools.lru_cache()
-    def studies_summary_stats(self) -> pd.DataFrame:
-        """Calculate summary statistics for the number of studies per patient.
-
-        Returns:
-            pd.DataFrame: Summary statistics for number of studies per patient for each set
-            (training/validation).
-        """
-        stats = self.studies_per_patient()
-        summary = self.__summary_stats_by_set(stats, STUDIES)
-        return summary
-
-    @functools.lru_cache()
-    def images_summary_stats(self) -> pd.DataFrame:
-        """Calculate summary statistics for the number of images per patient.
-
-        Returns:
-            pd.DataFrame: Summary statistics for number of images per patient for each set
-            (training/validation).
-        """
-        stats = self.images_per_patient()
-        summary = self.__summary_stats_by_set(stats, IMAGES)
-        return summary
 
     def fix_dataset(self):
         """Fix issues with the dataset (in place).
@@ -294,7 +170,8 @@ class CheXpert:
         Returns:
             pd.DataFrame: The dataset with the original and augmented columns.
         """
-        directory = CheXpert.find_directory() if self.__directory is None else self.__directory
+        directory = CheXpertDataset.find_directory() \
+            if self.__directory is None else self.__directory
         if not directory:
             raise RuntimeError('Cannot find the CheXpert directory')
         self.__logger.info('Using the dataset in %s', directory)
@@ -361,7 +238,7 @@ class CheXpert:
 
 def main():
     """Separate main function to follow conventions and docstring to make pylint happy."""
-    chexpert = CheXpert()
+    chexpert = CheXpertDataset()
     chexpert.fix_dataset()
     print(chexpert.df.to_csv(index=False))
 

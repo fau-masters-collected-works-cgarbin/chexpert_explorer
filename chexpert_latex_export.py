@@ -79,7 +79,7 @@ def format_table(table: str, source_df: pd.DataFrame, file: str,
         print(table, file=f)
 
 
-chexpert = cd.CheXpert()
+chexpert = cd.CheXpertDataset()
 chexpert.fix_dataset()
 # Make code a bit simpler
 df = chexpert.df
