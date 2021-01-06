@@ -29,8 +29,9 @@ import re
 import functools
 import pandas as pd
 import imagesize
+from pandas.core.frame import DataFrame
 
-# Dataset values that must hold when we manipulate it (groupby, pivot_table, filters, etc.)
+# Dataset invariants that must hold when we manipulate it (groupby, pivot_table, filters, etc.)
 # Numbers come from analyzing the .csv files shipped with the dataset (see chexpert_csv_eda.py)
 # If `assert` start to fail in the code, either the code is broken or the dataset has changed
 PATIENT_NUM_TRAINING = 64_540
@@ -131,7 +132,16 @@ class CheXpert:
         return self.__df
 
     @functools.lru_cache()
-    def patient_study_image_count(self, add_percentage=True):
+    def patient_study_image_count(self, add_percentage: bool = False) -> pd.DataFrame:
+        """Get count of patients, studies, and images, split by training/validation set.
+
+        Args:
+            add_percentage (bool, optional): Wheter to add percentage across sets. Defaults to True.
+
+        Returns:
+            pd.DataFrame: The DataFrame with the counts, in long format (only one column, with the
+                count, and a multiindex to identify set and item type).
+        """
         # We need a column that is unique for patient and study
         COL_PATIENT_STUDY = 'Patient/Study'
         df = self.__df.copy()
@@ -152,13 +162,15 @@ class CheXpert:
         stats = stats.rename(columns={0: COL_COUNT})
         stats.index.names = [INDEX_NAME_SET, INDEX_NAME_ITEM]
 
-        def pct_for_item(set_item):
+        def pct_for_item(one_set_one_item):
             # Divide this set/item by the sum of the same item type in all sets, e.g. all patients
             # for the training and validation sets - ignore the first level index and get all
             # items of the same type (second level index)
-            # MultiIndex slicing: https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
-            all_items = stats.loc[(slice(None), set_item.name[1]), :].sum()
-            return 100 * set_item[COL_COUNT] / all_items[COL_COUNT].sum()
+            # MultiIndex slicing: https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html # noqa
+            # and https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#using-slicers # noqa
+            # in particular
+            all_items_for_set = stats.loc[(slice(None), one_set_one_item.name[1]), :].sum()
+            return 100 * one_set_one_item[COL_COUNT] / all_items_for_set[COL_COUNT].sum()
 
         if add_percentage:
             stats[COL_PERCENTAGE] = stats.apply(pct_for_item, axis='columns')
