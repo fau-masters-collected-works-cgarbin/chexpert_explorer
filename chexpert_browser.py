@@ -42,7 +42,7 @@ st.write(summary)
 
 st.markdown('### Number of studies per quantile')
 stats = cxs.studies_per_patient(df).reset_index()
-summary = stats[[cxd.COL_TRAIN_VALIDATION, 'Studies']].groupby(
+summary = stats[[cxd.COL_TRAIN_VALIDATION, cxs.STUDIES]].groupby(
     [cxd.COL_TRAIN_VALIDATION], as_index=True).quantile([0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack())
 
@@ -52,7 +52,7 @@ st.write(summary)
 
 st.markdown('### Number of images per quantile')
 stats = cxs.images_per_patient(df).reset_index()
-summary = stats[[cxd.COL_TRAIN_VALIDATION, 'Images']].groupby(
+summary = stats[[cxd.COL_TRAIN_VALIDATION, cxs.IMAGES]].groupby(
     [cxd.COL_TRAIN_VALIDATION], as_index=True, observed=True).quantile(
         [0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack().reset_index())
