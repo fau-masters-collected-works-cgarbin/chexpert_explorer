@@ -11,7 +11,7 @@ import re
 from typing import List
 import pandas as pd
 import numpy as np
-import chexpert_dataset as cd
+import chexpert_dataset as cxd
 
 # Destination directories, with path separator at the end to simplify the code
 DIR_TABLES = os.path.join('..', 'chexpert-datasheet', 'tables') + os.sep
@@ -79,7 +79,7 @@ def format_table(table: str, source_df: pd.DataFrame, file: str,
         print(table, file=f)
 
 
-chexpert = cd.CheXpertDataset()
+chexpert = cxd.CheXpertDataset()
 chexpert.fix_dataset()
 # Make code a bit simpler
 df = chexpert.df
@@ -87,12 +87,12 @@ df = chexpert.df
 # Count of patients and images in the training and validation datasets
 NAME = 'patient-images-train-validate'
 CAPTION = 'Number of patients and images'
-stats = df.groupby([cd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
-assert stats.loc[cd.TRAINING][PATIENTS].sum() == cd.PATIENT_NUM_TRAINING
-assert stats[PATIENTS].sum() == cd.PATIENT_NUM_TOTAL
-assert stats[IMAGES].sum() == cd.IMAGE_NUM_TOTAL
+stats = df.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
+    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cxd.COL_VIEW_NUMBER, 'count'))
+assert stats.loc[cxd.TRAINING][PATIENTS].sum() == cxd.PATIENT_NUM_TRAINING
+assert stats[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL
+assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
 stats.to_latex(buf=DIR_TABLES+NAME+'.tex',
                formatters=[INT_FORMAT] * stats.shape[1],
                float_format=FLOAT_FORMAT, index_names=False,
@@ -101,11 +101,11 @@ stats.to_latex(buf=DIR_TABLES+NAME+'.tex',
 # Summary statistic of images per patient
 NAME = 'patient-images-stats-summary'
 CAPTION = 'Summary statistics for images per patient'
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_PATIENT_ID], as_index=True, observed=True).agg(
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
-assert stats.loc[cd.TRAINING][IMAGES].sum() == cd.IMAGE_NUM_TRAINING
-assert stats[IMAGES].sum() == cd.IMAGE_NUM_TOTAL
-summary = stats.groupby([cd.COL_TRAIN_VALIDATION], as_index=True).agg(
+stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_PATIENT_ID], as_index=True, observed=True).agg(
+    Images=(cxd.COL_VIEW_NUMBER, 'count'))
+assert stats.loc[cxd.TRAINING][IMAGES].sum() == cxd.IMAGE_NUM_TRAINING
+assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
+summary = stats.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True).agg(
     Min=(IMAGES, 'min'), Max=(IMAGES, 'max'), Median=(IMAGES, 'median'), Mean=(IMAGES, 'mean'),
     Std=(IMAGES, 'std'))
 summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
@@ -121,8 +121,8 @@ IMAGE_SUMMARY = 'Number of images'
 stats[IMAGE_SUMMARY] = pd.cut(stats.Images, bins=bins, labels=bin_labels, right=True)
 
 summary = stats.reset_index().groupby([IMAGE_SUMMARY], as_index=True, observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique))
-assert summary[PATIENTS].sum() == cd.PATIENT_NUM_TOTAL
+    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique))
+assert summary[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL
 summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
                  formatters=[INT_FORMAT] * summary.shape[1],
                  float_format=FLOAT_FORMAT, index_names=True,
@@ -132,9 +132,9 @@ summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
 
 
 def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
-    observations = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
-    images_in_set = len(df[cd.COL_VIEW_NUMBER])
-    ALL_LABELS = [cd.LABEL_POSITIVE, cd.LABEL_NEGATIVE, cd.LABEL_UNCERTAIN, cd.LABEL_NO_MENTION]
+    observations = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
+    images_in_set = len(df[cxd.COL_VIEW_NUMBER])
+    ALL_LABELS = [cxd.LABEL_POSITIVE, cxd.LABEL_NEGATIVE, cxd.LABEL_UNCERTAIN, cxd.LABEL_NO_MENTION]
     COL_NAMES = ['Positive', '%', 'Negative', '%', 'Uncertain', '%', 'No mention', '%']
     stats = pd.DataFrame(index=observations, columns=COL_NAMES)
     for obs in observations:
@@ -144,8 +144,8 @@ def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
         stats.loc[obs] = [x for t in zip(count, pct) for x in t]
     # Sanity check: check a few columns for the number of images
     cols_no_pct = [v for v in COL_NAMES if v != '%']
-    assert stats.loc[cd.OBSERVATION_NO_FINDING][cols_no_pct].sum() == images_in_set
-    assert stats.loc[cd.OBSERVATION_PATHOLOGY[1]][cols_no_pct].sum() == images_in_set
+    assert stats.loc[cxd.OBSERVATION_NO_FINDING][cols_no_pct].sum() == images_in_set
+    assert stats.loc[cxd.OBSERVATION_PATHOLOGY[1]][cols_no_pct].sum() == images_in_set
     return stats
 
 
@@ -167,18 +167,18 @@ def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
 
 NAME = 'label-frequency-training'
 CAPTION = 'Frequency of labels in the training set'
-generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING], NAME, CAPTION)
+generate_image_frequency_table(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.TRAINING], NAME, CAPTION)
 
 NAME = 'label-frequency-validation'
 CAPTION = 'Frequency of labels in the validation set'
-generate_image_frequency_table(df[df[cd.COL_TRAIN_VALIDATION] == cd.VALIDATION], NAME, CAPTION,
+generate_image_frequency_table(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.VALIDATION], NAME, CAPTION,
                                pos_neg_only=True)
 
 # Co-incidence of labels
 
 
 def label_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
-    labels = cd.OBSERVATION_OTHER + cd.OBSERVATION_PATHOLOGY
+    labels = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
     stats = pd.DataFrame(index=labels, columns=labels)
 
     for label in labels:
@@ -186,13 +186,13 @@ def label_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
         coincidences = [len(df_label[df_label[other_label] == 1]) for other_label in labels]
         stats.loc[label] = coincidences
     # Sanity check: 'No Finding' should not coincide with a pathology
-    assert stats.loc[cd.OBSERVATION_NO_FINDING][cd.OBSERVATION_PATHOLOGY].sum() == 0
+    assert stats.loc[cxd.OBSERVATION_NO_FINDING][cxd.OBSERVATION_PATHOLOGY].sum() == 0
     return stats
 
 
 NAME = 'label-coincidence'
 CAPTION = 'Coincidence of positive labels in the training set'
-stats = label_image_coincidence(df[df[cd.COL_TRAIN_VALIDATION] == cd.TRAINING])
+stats = label_image_coincidence(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.TRAINING])
 # Remove upper triangle (same as bottom triangle) to make it easier to follow
 stats.values[np.triu_indices_from(stats, 0)] = ''
 # Remove first row and last column (they are now empty)
@@ -208,9 +208,9 @@ format_table(table, stats, NAME, text_width=True, short_observation_name=True,
 
 NAME = 'demographic-by-set-sex'
 CAPTION = 'Images and patients by sex'
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_SEX], as_index=True,  observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
+stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_SEX], as_index=True,  observed=True).agg(
+    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cxd.COL_VIEW_NUMBER, 'count'))
 table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!')
@@ -218,9 +218,9 @@ format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION)
 
 NAME = 'demographic-by-set-age-group'
 CAPTION = 'Images and patients by age group'
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP], as_index=True,  observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
+stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP], as_index=True,  observed=True).agg(
+    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cxd.COL_VIEW_NUMBER, 'count'))
 table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!')
@@ -228,10 +228,10 @@ format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, fon
 
 NAME = 'demographic-by-set-sex-age-group'
 CAPTION = 'Images and patients by sex and age group'
-stats = df.groupby([cd.COL_TRAIN_VALIDATION, cd.COL_AGE_GROUP, cd.COL_SEX], as_index=True,
+stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP, cxd.COL_SEX], as_index=True,
                    observed=True).agg(
-    Patients=(cd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cd.COL_VIEW_NUMBER, 'count'))
+    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
+    Images=(cxd.COL_VIEW_NUMBER, 'count'))
 stats = stats.unstack(fill_value=0).reorder_levels([1, 0], axis='columns')
 table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
                        float_format=FLOAT_FORMAT, index_names=True,
