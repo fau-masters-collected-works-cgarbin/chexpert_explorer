@@ -5,15 +5,8 @@ Different views into CheXpert to understand its composition.
 
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import chexpert_dataset as cxd
 import chexpert_statistics as cxs
-
-sns.set_style("whitegrid")
-sns.set_palette("Set2", 4, 0.75)
-
-IMAGES = 'Images'
 
 cxdata = cxd.CheXpertDataset()
 cxdata.fix_dataset()
@@ -25,10 +18,6 @@ df = cxdata.df  # Shortcut for smaller code
 for c in [cxd.COL_SEX, cxd.COL_FRONTAL_LATERAL, cxd.COL_AP_PA, cxd.COL_AGE_GROUP,
           cxd.COL_TRAIN_VALIDATION]:
     df[c] = df[c].astype('object')
-
-# Note about reset_index() used in some cases: this makes the aggregations columns, not indices so
-# that 1) Streamlit display columns names (it doesn't display index names), and 2) we can use as
-# x/y in plots (I didn't find a way to use indices as x/y directly)
 
 st.set_page_config(page_title='CheXpert Statistics')
 st.markdown('# CheXpert Statistics')
@@ -45,7 +34,7 @@ summary = cxs.images_per_patient_binned(df)
 summary = summary.reset_index()
 for c in [cxd.COL_TRAIN_VALIDATION, cxs.IMAGES]:
     summary[c] = summary[c].astype('object')
-st.table(summary)
+st.write(summary)
 
 st.markdown('## Summary statistics for studies per patient')
 summary = cxs.studies_summary_stats(df)
@@ -56,15 +45,6 @@ stats = cxs.studies_per_patient(df).reset_index()
 summary = stats[[cxd.COL_TRAIN_VALIDATION, 'Studies']].groupby(
     [cxd.COL_TRAIN_VALIDATION], as_index=True).quantile([0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack())
-
-# plt.clf()
-# ax = sns.countplot(x='Studies', data=stats, color='gray')
-# sns.despine(ax=ax)
-# ax.set(yscale="log")
-# plt.xticks(rotation=90)
-# plt.xlabel('Number of studies')
-# plt.ylabel('Number of patients (log)')
-# st.pyplot(plt)
 
 st.markdown('## Summary statistics for images per patient')
 summary = cxs.images_summary_stats(df)
@@ -77,14 +57,6 @@ summary = stats[[cxd.COL_TRAIN_VALIDATION, 'Images']].groupby(
         [0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack().reset_index())
 
-# plt.clf()
-# ax = sns.countplot(x='Images', data=stats, color='gray')
-# sns.despine(ax=ax)
-# ax.set(yscale="log")
-# plt.xticks(rotation=90)
-# plt.xlabel('Number of images')
-# plt.ylabel('Number of patients (log)')
-# st.pyplot(plt)
 
 st.markdown('## Demographics')
 
@@ -107,16 +79,3 @@ stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP, cxd.COL_SEX], a
     Images=(cxd.COL_VIEW_NUMBER, 'count'))
 stats = stats.unstack(fill_value=0).reorder_levels([1, 0], axis='columns')
 st.write(stats)
-
-# Redo stats without index to use columns names in the plot
-# stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP, cxd.COL_SEX], as_index=False,
-#                    observed=True).agg(
-#     Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
-#     Images=(cxd.COL_VIEW_NUMBER, 'count'))
-# plt.clf()
-# sns.catplot(y='Patients', x='Sex', hue=cd.COL_AGE_GROUP, col=cd.COL_TRAIN_VALIDATION, data=stats,
-#             kind='bar', sharey=False)
-# st.pyplot(plt)
-# sns.catplot(y='Images', x='Sex', hue=cd.COL_AGE_GROUP, col=cd.COL_TRAIN_VALIDATION, data=stats,
-#             kind='bar', sharey=False)
-# st.pyplot(plt)
