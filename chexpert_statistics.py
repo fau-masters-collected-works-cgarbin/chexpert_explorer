@@ -76,7 +76,7 @@ def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) ->
     stats = df.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
         Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
         Studies=(COL_PATIENT_STUDY, pd.Series.nunique),
-        Images=(cxd.COL_VIEW_NUMBER, COL_COUNT))
+        Images=(cxd.COL_VIEW_NUMBER, 'count'))
 
     assert stats[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL
     assert stats[STUDIES].sum() == cxd.STUDY_NUM_TOTAL
@@ -122,7 +122,7 @@ def images_per_patient(df: pd.DataFrame) -> pd.DataFrame:
     # each study), thus in this case we need the overall count and not unique count
     stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_PATIENT_ID], as_index=True,
                        observed=True).agg(
-        Images=(cxd.COL_VIEW_NUMBER, COL_COUNT))
+        Images=(cxd.COL_VIEW_NUMBER, 'count'))
     return stats
 
 

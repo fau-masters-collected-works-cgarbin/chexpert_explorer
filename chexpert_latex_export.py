@@ -98,10 +98,7 @@ stats.to_latex(buf=DIR_TABLES+NAME+'.tex',
 # Summary statistic of images per patient
 NAME = 'patient-images-stats-summary'
 CAPTION = 'Summary statistics for images per patient'
-stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_PATIENT_ID], as_index=True, observed=True).agg(
-    Images=(cxd.COL_VIEW_NUMBER, 'count'))
-assert stats.loc[cxd.TRAINING][IMAGES].sum() == cxd.IMAGE_NUM_TRAINING
-assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
+stats = cxs.images_per_patient(df)
 summary = stats.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True).agg(
     Min=(IMAGES, 'min'), Max=(IMAGES, 'max'), Median=(IMAGES, 'median'), Mean=(IMAGES, 'mean'),
     Std=(IMAGES, 'std'))
