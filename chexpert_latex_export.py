@@ -12,6 +12,7 @@ from typing import List
 import pandas as pd
 import numpy as np
 import chexpert_dataset as cxd
+import chexpert_statistics as cxs
 
 # Destination directories, with path separator at the end to simplify the code
 DIR_TABLES = os.path.join('..', 'chexpert-datasheet', 'tables') + os.sep
@@ -85,14 +86,10 @@ chexpert.fix_dataset()
 df = chexpert.df
 
 # Count of patients and images in the training and validation datasets
-NAME = 'patient-images-train-validate'
-CAPTION = 'Number of patients and images'
-stats = df.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
-    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cxd.COL_VIEW_NUMBER, 'count'))
-assert stats.loc[cxd.TRAINING][PATIENTS].sum() == cxd.PATIENT_NUM_TRAINING
-assert stats[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL
-assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
+NAME = 'patient-studies-images-train-validate'
+CAPTION = 'Number of patients, studies, and images'
+stats = cxs.patient_study_image_count(df)
+stats = stats.unstack().droplevel(0, axis='columns')
 stats.to_latex(buf=DIR_TABLES+NAME+'.tex',
                formatters=[INT_FORMAT] * stats.shape[1],
                float_format=FLOAT_FORMAT, index_names=False,
@@ -115,18 +112,13 @@ summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
 # Binned number of images per patient (continuing from above, where the number of images was added)
 NAME = 'patient-images-stats-distribution'
 CAPTION = 'Distribution of images per patient'
-bins = [0, 1, 2, 3, 10, 100]
-bin_labels = ['1 image', '2 images', '3 images', '4 to 10 images', 'More than 10 images']
-IMAGE_SUMMARY = 'Number of images'
-stats[IMAGE_SUMMARY] = pd.cut(stats.Images, bins=bins, labels=bin_labels, right=True)
+stats = cxs.images_per_patient_binned(df)
+table = stats.to_latex(formatters=[INT_FORMAT, FLOAT_FORMAT, FLOAT_FORMAT],
+                       float_format=FLOAT_FORMAT, index_names=True,
+                       caption=CAPTION, label='tab:'+NAME, position='h!')
+format_table(table, stats, NAME, text_width=True, horizontal_separators=SEP_TRAIN_VALIDATION,
+             font_size='small')
 
-summary = stats.reset_index().groupby([IMAGE_SUMMARY], as_index=True, observed=True).agg(
-    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique))
-assert summary[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL
-summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
-                 formatters=[INT_FORMAT] * summary.shape[1],
-                 float_format=FLOAT_FORMAT, index_names=True,
-                 caption=CAPTION, label='tab:'+NAME, position='h!')
 
 # Frequency of labels in the training and validation sets
 
@@ -196,8 +188,8 @@ stats = label_image_coincidence(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.TRAINING]
 # Remove upper triangle (same as bottom triangle) to make it easier to follow
 stats.values[np.triu_indices_from(stats, 0)] = ''
 # Remove first row and last column (they are now empty)
-stats.drop(labels=cd.OBSERVATION_NO_FINDING, axis='rows', inplace=True)
-stats.drop(labels=cd.OBSERVATION_PATHOLOGY[-1], axis='columns', inplace=True)
+stats.drop(labels=cxd.OBSERVATION_NO_FINDING, axis='rows', inplace=True)
+stats.drop(labels=cxd.OBSERVATION_PATHOLOGY[-1], axis='columns', inplace=True)
 
 table = stats.to_latex(column_format='r' * (stats.shape[1]+1),  # +1 for index
                        float_format=FLOAT_FORMAT, index_names=True,
