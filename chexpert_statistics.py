@@ -25,6 +25,7 @@ INDEX_NAME_SET = 'Set'
 INDEX_NAME_ITEM = 'Item'
 COL_COUNT = 'Count'
 COL_PERCENTAGE = '%'
+COL_PERCENTAGE_CUMULATIVE = 'Cumulative %'
 PATIENTS = 'Patients'
 IMAGES = 'Images'
 STUDIES = 'Studies'
@@ -44,41 +45,14 @@ def _summary_stats_by_set(df: pd.DataFrame, column: str) -> pd.DataFrame:
     return summary
 
 
-def _add_percentage_by_first_index(df: pd.DataFrame) -> pd.DataFrame:
-    """Add percentages to a DataFrame in long format, with a two-level MultiIndex.
-
-    Cover the typical case where we need to add percentages: a DataFramme with a two-level
-    MultiIndex, where the first level split the observations. The typical case it the first level
-    set to training/validation, the second level is a counter (images, patients), and the
-    observation column is an aggregation counter (i.e. a DataFrame in long format).
-
-    The percentage is calculated for each first-level index, not for the entire DataFrame. This is
-    done to also cover a typical case where the first level is training/validation.
-
-    Other cases require customization to this code.
-
-    Args:
-        df (pd.DataFrame): The DataFrame with the observation
-
-    Return:
-        pd.DataFrame: a DataFrame with a percentage column next to the observation column.
-    """
-    def pct_for_item(row):
-        # Divide this row's value by the sum of all rows that have the same value for the first
-        # index level
-        # This could be done with a lambda, but splitting into a function let us document better
-        # what we are doing with the MultiIndex slicing here
-        # MultiIndex slicing: https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html # noqa
-        # and https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#using-slicers # noqa
-        # in particular
-        first_index_sum = df.loc[(row.name[0], slice(None)), :].sum()
-        return 100 * row[obs_col_name] / first_index_sum
-
+def _add_percentage(df: pd.DataFrame, level=0, cumulative=False) -> pd.DataFrame:
+    """Add percentages to a multi-index DataFrame in long format, using the given index level."""
     # It must be a dataset in long format
     assert len(df.columns) == 1
 
-    obs_col_name = df.columns[0]
-    df[COL_PERCENTAGE] = df.apply(pct_for_item, axis='columns')
+    df[COL_PERCENTAGE] = df.groupby(level=level).apply(lambda x: 100 * x / x.sum())
+    if(cumulative):
+        df[COL_PERCENTAGE_CUMULATIVE] = df.groupby(level=level)[COL_PERCENTAGE].cumsum()
     return df
 
 
@@ -113,18 +87,8 @@ def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) ->
     stats = stats.rename(columns={0: COL_COUNT})
     stats.index.names = [INDEX_NAME_SET, INDEX_NAME_ITEM]
 
-    def pct_for_item(one_set_one_item):
-        # Divide this set/item by the sum of the same item type in all sets, e.g. all patients
-        # for the training and validation sets - ignore the first level index and get all
-        # items of the same type (second level index)
-        # MultiIndex slicing: https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html # noqa
-        # and https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#using-slicers # noqa
-        # in particular
-        all_items_for_set = stats.loc[(slice(None), one_set_one_item.name[1]), :].sum()
-        return 100 * one_set_one_item[COL_COUNT] / all_items_for_set[COL_COUNT].sum()
-
     if add_percentage:
-        stats[COL_PERCENTAGE] = stats.apply(pct_for_item, axis='columns')
+        stats = _add_percentage(stats, level=1)
 
     return stats
 
@@ -186,7 +150,7 @@ def images_per_patient_binned(df: pd.DataFrame, add_percentage: bool = True) -> 
     assert summary.loc[cxd.TRAINING].sum()[0] == cxd.PATIENT_NUM_TRAINING
     assert summary.loc[cxd.VALIDATION].sum()[0] == cxd.PATIENT_NUM_VALIDATION
 
-    summary = _add_percentage_by_first_index(summary)
+    summary = _add_percentage(summary, level=0, cumulative=True)
     return summary
 
 
@@ -224,7 +188,7 @@ def main():
     """Test code to be invoked from the command line."""
     cxdata = cxd.CheXpertDataset()
     cxdata.fix_dataset()
-    stats = images_per_patient_binned(cxdata.df)
+    stats = patient_study_image_count(cxdata.df)
     print(stats)
 
 
