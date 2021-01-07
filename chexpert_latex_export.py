@@ -116,8 +116,7 @@ stats = cxs.images_per_patient_binned(df)
 table = stats.to_latex(formatters=[INT_FORMAT, FLOAT_FORMAT, FLOAT_FORMAT],
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!')
-format_table(table, stats, NAME, text_width=True, horizontal_separators=SEP_TRAIN_VALIDATION,
-             font_size='small')
+format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, font_size='scriptsize')
 
 
 # Frequency of labels in the training and validation sets
