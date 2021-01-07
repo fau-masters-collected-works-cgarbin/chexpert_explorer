@@ -12,8 +12,7 @@ Example::
     cxdata.fix_dataset() # optional
 
     # Calculate statistics on it
-    cxstats = cxs.ChexPer
-    ...
+    stats = cxs.patient_study_image_count(cxdata.df)
 """
 import pandas as pd
 import chexpert_dataset as cxd
@@ -43,6 +42,44 @@ def _summary_stats_by_set(df: pd.DataFrame, column: str) -> pd.DataFrame:
         INDEX_NAME_SET, INDEX_NAME_ITEM])
     summary.index = idx
     return summary
+
+
+def _add_percentage_by_first_index(df: pd.DataFrame) -> pd.DataFrame:
+    """Add percentages to a DataFrame in long format, with a two-level MultiIndex.
+
+    Cover the typical case where we need to add percentages: a DataFramme with a two-level
+    MultiIndex, where the first level split the observations. The typical case it the first level
+    set to training/validation, the second level is a counter (images, patients), and the
+    observation column is an aggregation counter (i.e. a DataFrame in long format).
+
+    The percentage is calculated for each first-level index, not for the entire DataFrame. This is
+    done to also cover a typical case where the first level is training/validation.
+
+    Other cases require customization to this code.
+
+    Args:
+        df (pd.DataFrame): The DataFrame with the observation
+
+    Return:
+        pd.DataFrame: a DataFrame with a percentage column next to the observation column.
+    """
+    def pct_for_item(row):
+        # Divide this row's value by the sum of all rows that have the same value for the first
+        # index level
+        # This could be done with a lambda, but splitting into a function let us document better
+        # what we are doing with the MultiIndex slicing here
+        # MultiIndex slicing: https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html # noqa
+        # and https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#using-slicers # noqa
+        # in particular
+        first_index_sum = df.loc[(row.name[0], slice(None)), :].sum()
+        return 100 * row[obs_col_name] / first_index_sum
+
+    # It must be a dataset in long format
+    assert len(df.columns) == 1
+
+    obs_col_name = df.columns[0]
+    df[COL_PERCENTAGE] = df.apply(pct_for_item, axis='columns')
+    return df
 
 
 def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) -> pd.DataFrame:
@@ -126,6 +163,33 @@ def images_per_patient(df: pd.DataFrame) -> pd.DataFrame:
     return stats
 
 
+def images_per_patient_binned(df: pd.DataFrame, add_percentage: bool = True) -> pd.DataFrame:
+    """Get the binned number of images per patient, split by training/validation set.
+
+    Args:
+        df (pd.DataFrame): A CheXpert DataFrame.
+        add_percentage (bool, optional): Wheter to add percentage across sets. Defaults to True.
+
+    Returns:
+        pd.DataFrame: The DataFrame with the binned image counts, in long format (columns with the
+            observation and a multiindex to identify set and bins).
+    """
+    stats = images_per_patient(df)
+    bins = [0, 1, 2, 3, 10, 20, 100]
+    bin_labels = ['1 image', '2 images', '3 images', '4 to 10 images', '11 to 20 images',
+                  'More than 20 images']
+    stats[IMAGES] = pd.cut(stats.Images, bins=bins, labels=bin_labels, right=True)
+    summary = stats.reset_index().groupby([cxd.COL_TRAIN_VALIDATION, IMAGES], as_index=True,
+                                          observed=True).agg(
+        Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique))
+
+    assert summary.loc[cxd.TRAINING].sum()[0] == cxd.PATIENT_NUM_TRAINING
+    assert summary.loc[cxd.VALIDATION].sum()[0] == cxd.PATIENT_NUM_VALIDATION
+
+    summary = _add_percentage_by_first_index(summary)
+    return summary
+
+
 def studies_summary_stats(df: pd.DataFrame) -> pd.DataFrame:
     """Calculate summary statistics for the number of studies per patient.
 
@@ -154,3 +218,15 @@ def images_summary_stats(df: pd.DataFrame) -> pd.DataFrame:
     stats = images_per_patient(df)
     summary = _summary_stats_by_set(stats, IMAGES)
     return summary
+
+
+def main():
+    """Test code to be invoked from the command line."""
+    cxdata = cxd.CheXpertDataset()
+    cxdata.fix_dataset()
+    stats = images_per_patient_binned(cxdata.df)
+    print(stats)
+
+
+if __name__ == '__main__':
+    main()

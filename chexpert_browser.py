@@ -15,9 +15,9 @@ sns.set_palette("Set2", 4, 0.75)
 
 IMAGES = 'Images'
 
-chexpert = cxd.CheXpertDataset()
-chexpert.fix_dataset()
-df = chexpert.df  # Shortcut for smaller code
+cxdata = cxd.CheXpertDataset()
+cxdata.fix_dataset()
+df = cxdata.df  # Shortcut for smaller code
 
 # Hack for https://github.com/streamlit/streamlit/issues/47
 # Streamlit does not support categorical values
@@ -38,6 +38,14 @@ stats = cxs.patient_study_image_count(df)
 # Long format, without the "Counts" column index
 stats = stats.unstack().reorder_levels([1, 0], axis='columns').droplevel(1, axis='columns')
 st.write(stats)
+
+st.markdown('### Binned number of images')
+summary = cxs.images_per_patient_binned(df)
+# Hack for https://github.com/streamlit/streamlit/issues/47
+summary = summary.reset_index()
+for c in [cxd.COL_TRAIN_VALIDATION, cxs.IMAGES]:
+    summary[c] = summary[c].astype('object')
+st.table(summary)
 
 st.markdown('## Summary statistics for studies per patient')
 summary = cxs.studies_summary_stats(df)
@@ -68,16 +76,6 @@ summary = stats[[cxd.COL_TRAIN_VALIDATION, 'Images']].groupby(
     [cxd.COL_TRAIN_VALIDATION], as_index=True, observed=True).quantile(
         [0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack().reset_index())
-
-st.markdown('### Binned number of images')
-bins = [0, 1, 2, 3, 10, 100]
-bin_labels = ['1 image', '2 images', '3 images', '4 to 10 images', 'More than 10 images']
-IMAGE_SUMMARY = 'Number of images'
-stats[IMAGE_SUMMARY] = pd.cut(stats.Images, bins=bins,
-                              labels=bin_labels, right=True).astype('object')
-summary = stats.reset_index().groupby([IMAGE_SUMMARY], as_index=True, observed=True).agg(
-    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique))
-st.write(summary)
 
 # plt.clf()
 # ax = sns.countplot(x='Images', data=stats, color='gray')
