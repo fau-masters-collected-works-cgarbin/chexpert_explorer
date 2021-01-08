@@ -28,6 +28,9 @@ SHORT_OBSERVATION_NAMES = [('Enlarged Cardiomediastinum', 'Enlarged Card.')]
 SEP_OBSERVATIONS = ['Consolidation', 'Lung Opacity']
 SEP_TRAIN_VALIDATION = ['Validation']
 
+# Save to use later
+# stats.index.names = [''] * stats.index.nlevels
+
 
 def format_table(table: str, source_df: pd.DataFrame, file: str,
                  short_observation_name: bool = False, text_width: bool = False,
@@ -120,6 +123,7 @@ format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, fon
 
 
 def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
+    """How many images has each observation, split by label (pos, neg, uncertain, no mention)."""
     observations = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
     images_in_set = len(df[cxd.COL_VIEW_NUMBER])
     ALL_LABELS = [cxd.LABEL_POSITIVE, cxd.LABEL_NEGATIVE, cxd.LABEL_UNCERTAIN, cxd.LABEL_NO_MENTION]
@@ -139,6 +143,7 @@ def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
 
 def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
                                    pos_neg_only: bool = False) -> str:
+    """Create the LaTeX table for label frequency per image."""
     stats = label_image_frequency(df)
     if pos_neg_only:
         # Assume pos/neg count and % are the first columns
@@ -165,7 +170,8 @@ generate_image_frequency_table(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.VALIDATION
 # Co-incidence of labels
 
 
-def label_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
+def observation_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
+    """Count how many times each observation appears with (is positive with) another observation."""
     labels = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
     stats = pd.DataFrame(index=labels, columns=labels)
 
@@ -178,9 +184,9 @@ def label_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
     return stats
 
 
-NAME = 'label-coincidence'
-CAPTION = 'Coincidence of positive labels in the training set'
-stats = label_image_coincidence(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.TRAINING])
+NAME = 'observation-coincidence'
+CAPTION = 'Coincidence of positive observations in the training set'
+stats = observation_image_coincidence(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.TRAINING])
 # Remove upper triangle (same as bottom triangle) to make it easier to follow
 stats.values[np.triu_indices_from(stats, 0)] = ''
 # Remove first row and last column (they are now empty)
@@ -196,7 +202,7 @@ format_table(table, stats, NAME, text_width=True, short_observation_name=True,
 
 NAME = 'demographic-by-set-sex'
 CAPTION = 'Images and patients by sex'
-stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_SEX], as_index=True,  observed=True).agg(
+stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_SEX], as_index=True, observed=True).agg(
     Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
     Images=(cxd.COL_VIEW_NUMBER, 'count'))
 table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
@@ -206,7 +212,7 @@ format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION)
 
 NAME = 'demographic-by-set-age-group'
 CAPTION = 'Images and patients by age group'
-stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP], as_index=True,  observed=True).agg(
+stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP], as_index=True, observed=True).agg(
     Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
     Images=(cxd.COL_VIEW_NUMBER, 'count'))
 table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
