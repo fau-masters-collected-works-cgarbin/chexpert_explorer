@@ -28,9 +28,6 @@ SHORT_OBSERVATION_NAMES = [('Enlarged Cardiomediastinum', 'Enlarged Card.')]
 SEP_OBSERVATIONS = ['Consolidation', 'Lung Opacity']
 SEP_TRAIN_VALIDATION = ['Validation']
 
-# Save to use later
-# stats.index.names = [''] * stats.index.nlevels
-
 
 def format_table(table: str, source_df: pd.DataFrame, file: str,
                  short_observation_name: bool = False, text_width: bool = False,
@@ -113,10 +110,14 @@ summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
 NAME = 'patient-images-stats-distribution'
 CAPTION = 'Distribution of images per patient'
 stats = cxs.images_per_patient_binned(df)
-table = stats.to_latex(formatters=[INT_FORMAT, FLOAT_FORMAT, FLOAT_FORMAT],
+# Simplify the table to make it look better
+# index_names=False should be even better, but it has a bug: https://github.com/pandas-dev/pandas/issues/18326
+stats.index.names = [''] * stats.index.nlevels
+table = stats.to_latex(formatters=[INT_FORMAT, FLOAT_FORMAT, FLOAT_FORMAT] * 2,
                        float_format=FLOAT_FORMAT, index_names=True,
-                       caption=CAPTION, label='tab:'+NAME, position='h!')
-format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, font_size='scriptsize')
+                       caption=CAPTION, label='tab:'+NAME, position='h!', multicolumn=True)
+format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION,
+             font_size='small', text_width=True)
 
 
 # Frequency of labels in the training and validation sets
@@ -167,8 +168,6 @@ CAPTION = 'Frequency of labels in the validation set'
 generate_image_frequency_table(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.VALIDATION], NAME, CAPTION,
                                pos_neg_only=True)
 
-# Co-incidence of labels
-
 
 def observation_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
     """Count how many times each observation appears with (is positive with) another observation."""
@@ -202,13 +201,13 @@ format_table(table, stats, NAME, text_width=True, short_observation_name=True,
 
 NAME = 'demographic-by-set-sex'
 CAPTION = 'Images and patients by sex'
-stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_SEX], as_index=True, observed=True).agg(
-    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cxd.COL_VIEW_NUMBER, 'count'))
-table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
+stats = cxs.images_per_patient_sex(df)
+# Simplify the table to make it look better
+stats.index.names = ['', cxd.COL_SEX]
+table = stats.to_latex(formatters=[INT_FORMAT, FLOAT_FORMAT] * (stats.shape[1]//2),
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!')
-format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION)
+format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, font_size='small')
 
 NAME = 'demographic-by-set-age-group'
 CAPTION = 'Images and patients by age group'
