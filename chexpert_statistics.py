@@ -13,6 +13,12 @@ Example::
 
     # Calculate statistics on it
     stats = cxs.patient_study_image_count(cxdata.df)
+
+The functions take as input a DataFrame create by a CheXpertDataset class and return the requested
+statistics/summary. The DataFrame may be filtered (e.g. only the training row), as long as it has
+the same number of columns as the original CheXPertDataset DataFrame.
+
+The returned DataFrames are in long format, i.e. one observation per row.
 """
 import pandas as pd
 import chexpert_dataset as cxd
@@ -68,16 +74,7 @@ def _add_percentage(df: pd.DataFrame, level=0, cumulative=False) -> pd.DataFrame
 
 
 def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) -> pd.DataFrame:
-    """Get count of patients, studies, and images, split by training/validation set.
-
-    Args:
-        df (pd.DataFrame): A CheXpert DataFrame.
-        add_percentage (bool, optional): Wheter to add percentage across sets. Defaults to True.
-
-    Returns:
-        pd.DataFrame: The DataFrame with the counts, in long format (only one column, with the
-            count, and a multiindex to identify set and item type).
-    """
+    """Calculate count of patients, studies, and images, split by training/validation set."""
     # We need a column that is unique for patient and study
     COL_PATIENT_STUDY = 'Patient/Study'
     df = df.copy()  # preserve the caller's data
@@ -104,14 +101,7 @@ def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) ->
 
 
 def studies_per_patient(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate the number of studies for each patient.
-
-    Args:
-        df (pd.DataFrame): A CheXpert DataFrame.
-
-    Returns:
-        pd.DataFrame: Number of studies each patient has for each set (training/validation).
-    """
+    """Calculate the number of studies for each patient. """
     # The same study number may shows up more than once for the same patient (a study that has
     # more than one image), thus we need the unique count of studies in this case
     stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_PATIENT_ID], as_index=True,
@@ -121,14 +111,7 @@ def studies_per_patient(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def images_per_patient(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate the number of images for each patient.
-
-    Args:
-        df (pd.DataFrame): A CheXpert DataFrame.
-
-    Returns:
-        pd.DataFrame: Number of images each patient has for each set (training/validation).
-    """
+    """Calculate the number of images for each patient."""
     # Image (view) numbers may be repeated for the same patient (they are unique only within
     # each study), thus in this case we need the overall count and not unique count
     stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_PATIENT_ID], as_index=True,
@@ -138,15 +121,7 @@ def images_per_patient(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def images_per_patient_sex(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate the number of images for each patient, split by sex.
-
-    Args:
-        df (pd.DataFrame): A CheXpert DataFrame.
-
-    Returns:
-        pd.DataFrame: Number of images each patient has for each set (training/validation), split
-            by sex.
-    """
+    """Calculate the number of images for each patient, split by sex."""
     # Image (view) numbers may be repeated for the same patient (they are unique only within
     # each study), thus in this case we need the overall count and not unique count
     stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_SEX], as_index=True,  observed=True).agg(
@@ -168,16 +143,7 @@ def images_per_patient_sex(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def images_per_patient_binned(df: pd.DataFrame, add_percentage: bool = True) -> pd.DataFrame:
-    """Get the binned number of images per patient, split by training/validation set.
-
-    Args:
-        df (pd.DataFrame): A CheXpert DataFrame.
-        add_percentage (bool, optional): Wheter to add percentage across sets. Defaults to True.
-
-    Returns:
-        pd.DataFrame: The DataFrame with the binned image counts, in long format (columns with the
-            observation and a multiindex to identify set and bins).
-    """
+    """Calculate the binned number of images per patient, split by training/validation set."""
     stats = images_per_patient(df)
     bins = [0, 1, 2, 3, 4, 5, 10, 20, 30, 100]
     bin_labels = ['1 image', '2 images', '3 images', '4 images',  '5 images', '6 to 10 images',
@@ -207,46 +173,21 @@ def images_per_patient_binned(df: pd.DataFrame, add_percentage: bool = True) -> 
 
 
 def studies_summary_stats(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate summary statistics for the number of studies per patient.
-
-    Args:
-        df (pd.DataFrame): A CheXpert DataFrame.
-
-    Returns:
-        pd.DataFrame: Summary statistics for number of studies per patient for each set
-        (training/validation).
-    """
+    """Calculate summary statistics for the number of studies per patient."""
     stats = studies_per_patient(df)
     summary = _summary_stats_by_set(stats, STUDIES)
     return summary
 
 
 def images_summary_stats(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate summary statistics for the number of images per patient.
-
-    Args:
-        df (pd.DataFrame): A CheXpert DataFrame.
-
-    Returns:
-        pd.DataFrame: Summary statistics for number of images per patient for each set
-        (training/validation).
-    """
+    """Calculate summary statistics for the number of images per patient."""
     stats = images_per_patient(df)
     summary = _summary_stats_by_set(stats, IMAGES)
     return summary
 
 
 def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate the number and percentage of times each observation appears in images.
-
-    Counts are split by label (positive, negative, uncertain, no mention).
-
-    Args:
-        df (pd.DataFrame): A CheXpert DataFrame.
-
-    Returns:
-        pd.DataFrame: Number and % of images with each observation.
-    """
+    """Calculate the number and percentage of times each observation appears in images."""
     observations = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
     images_in_set = len(df[cxd.COL_VIEW_NUMBER])
     ALL_LABELS = [cxd.LABEL_POSITIVE, cxd.LABEL_NEGATIVE, cxd.LABEL_UNCERTAIN, cxd.LABEL_NO_MENTION]
@@ -262,6 +203,20 @@ def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
     cols_no_pct = [v for v in COL_NAMES if v != '%']
     assert stats.loc[cxd.OBSERVATION_NO_FINDING][cols_no_pct].sum() == images_in_set
     assert stats.loc[cxd.OBSERVATION_PATHOLOGY[1]][cols_no_pct].sum() == images_in_set
+    return stats
+
+
+def observation_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate how many times each observation appears with (is positive with) another one."""
+    labels = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
+    stats = pd.DataFrame(index=labels, columns=labels)
+
+    for label in labels:
+        df_label = df[df[label] == 1]
+        coincidences = [len(df_label[df_label[other_label] == 1]) for other_label in labels]
+        stats.loc[label] = coincidences
+    # Sanity check: 'No Finding' should not coincide with a pathology
+    assert stats.loc[cxd.OBSERVATION_NO_FINDING][cxd.OBSERVATION_PATHOLOGY].sum() == 0
     return stats
 
 
