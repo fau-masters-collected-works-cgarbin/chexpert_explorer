@@ -28,14 +28,6 @@ stats = cxs.patient_study_image_count(df)
 stats = stats.unstack().reorder_levels([1, 0], axis='columns').droplevel(1, axis='columns')
 st.write(stats)
 
-st.markdown('### Binned number of images')
-summary = cxs.images_per_patient_binned(df)
-# Hack for https://github.com/streamlit/streamlit/issues/47
-summary = summary.reset_index()
-for c in [cxd.COL_TRAIN_VALIDATION, cxs.IMAGES]:
-    summary[c] = summary[c].astype('object')
-st.write(summary)
-
 st.markdown('## Summary statistics for studies per patient')
 summary = cxs.studies_summary_stats(df)
 st.write(summary)
@@ -57,13 +49,19 @@ summary = stats[[cxd.COL_TRAIN_VALIDATION, cxs.IMAGES]].groupby(
         [0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
 st.write(summary.unstack().reset_index())
 
+st.markdown('### Binned number of images')
+summary = cxs.images_per_patient_binned(df)
+# Hack for https://github.com/streamlit/streamlit/issues/47
+summary = summary.reset_index()
+for c in [cxd.COL_TRAIN_VALIDATION, cxs.IMAGES]:
+    summary[c] = summary[c].astype('object')
+st.write(summary)
+
 
 st.markdown('## Demographics')
 
 st.markdown('### Number of patients and images by sex')
-stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_SEX], as_index=False,  observed=True).agg(
-    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cxd.COL_VIEW_NUMBER, 'count'))
+stats = cxs.images_per_patient_sex(df)
 st.write(stats)
 
 st.markdown('### Number of patients and images by age group')
