@@ -155,6 +155,11 @@ def images_per_patient_sex(df: pd.DataFrame) -> pd.DataFrame:
     # Adjust the column order to a logical sequence
     stats = stats[[PATIENTS, COL_PERCENTAGE_PATIENTS, IMAGES, COL_PERCENTAGE_IMAGES]]
 
+    # Improve presentation of the columns headers
+    columns = pd.MultiIndex.from_product([[PATIENTS, IMAGES],
+                                          [COL_COUNT, COL_PERCENTAGE]])
+    stats.columns = columns
+
     return stats
 
 
