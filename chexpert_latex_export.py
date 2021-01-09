@@ -96,15 +96,19 @@ stats.to_latex(buf=DIR_TABLES+NAME+'.tex',
                caption=CAPTION, label='tab:'+NAME, position='h!')
 
 # Summary statistic of images per patient
-NAME = 'patient-images-stats-summary'
-CAPTION = 'Summary statistics for images per patient'
-stats = cxs.images_per_patient(df)
-summary = stats.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True).agg(
-    Min=(IMAGES, 'min'), Max=(IMAGES, 'max'), Median=(IMAGES, 'median'), Mean=(IMAGES, 'mean'),
-    Std=(IMAGES, 'std'))
-summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
-                 float_format=FLOAT_FORMAT, index_names=False,
-                 caption=CAPTION, label='tab:'+NAME, position='h!')
+# This sounded like a good idea, but the binned image count table is a better representation
+# Will disable the code, instad of removing it, in case there is a good reason to reinstate it
+patient_summary_stat = False
+if patient_summary_stat:
+    NAME = 'patient-images-stats-summary'
+    CAPTION = 'Summary statistics for images per patient'
+    stats = cxs.images_per_patient(df)
+    summary = stats.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True).agg(
+        Min=(IMAGES, 'min'), Max=(IMAGES, 'max'), Median=(IMAGES, 'median'), Mean=(IMAGES, 'mean'),
+        Std=(IMAGES, 'std'))
+    summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
+                     float_format=FLOAT_FORMAT, index_names=False,
+                     caption=CAPTION, label='tab:'+NAME, position='h!')
 
 # Binned number of images per patient (continuing from above, where the number of images was added)
 NAME = 'patient-images-stats-distribution'
