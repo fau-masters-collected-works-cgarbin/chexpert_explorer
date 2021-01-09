@@ -190,7 +190,9 @@ format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, fon
 NAME = 'demographic-by-set-sex-age-group'
 CAPTION = 'Images and patients by sex and age group'
 stats = cxs.patients_images_by_sex_age_group(df)
-stats = stats.unstack(fill_value=0).reorder_levels([1, 0], axis='columns')
+stats = stats.unstack(fill_value=0)
+# Simplify the table to make it look better
+stats.index.names = ['', cxd.COL_AGE_GROUP]
 table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!')

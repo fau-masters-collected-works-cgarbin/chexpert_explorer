@@ -242,7 +242,7 @@ def main():
     """Test code to be invoked from the command line."""
     cxdata = cxd.CheXpertDataset()
     cxdata.fix_dataset()
-    stats = images_per_patient_binned(cxdata.df)
+    stats = patients_images_by_sex_age_group(cxdata.df)
     print(stats)
 
 
