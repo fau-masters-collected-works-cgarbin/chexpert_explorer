@@ -229,6 +229,15 @@ def patients_images_by_age_group(df: pd.DataFrame) -> pd.DataFrame:
     return stats
 
 
+def patients_images_by_sex_age_group(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate number of patients and images by sex and age group."""
+    stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP, cxd.COL_SEX], as_index=True,
+                       observed=True).agg(
+        Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
+        Images=(cxd.COL_VIEW_NUMBER, 'count'))
+    return stats
+
+
 def main():
     """Test code to be invoked from the command line."""
     cxdata = cxd.CheXpertDataset()

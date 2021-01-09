@@ -189,10 +189,7 @@ format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, fon
 
 NAME = 'demographic-by-set-sex-age-group'
 CAPTION = 'Images and patients by sex and age group'
-stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP, cxd.COL_SEX], as_index=True,
-                   observed=True).agg(
-    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cxd.COL_VIEW_NUMBER, 'count'))
+stats = cxs.patients_images_by_sex_age_group(df)
 stats = stats.unstack(fill_value=0).reorder_levels([1, 0], axis='columns')
 table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
                        float_format=FLOAT_FORMAT, index_names=True,
