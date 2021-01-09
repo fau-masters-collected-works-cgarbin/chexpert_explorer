@@ -164,11 +164,11 @@ def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
 
 
 NAME = 'label-frequency-training'
-CAPTION = 'Frequency of labels in the training set'
+CAPTION = 'Frequency of labels in the training set images'
 generate_image_frequency_table(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.TRAINING], NAME, CAPTION)
 
 NAME = 'label-frequency-validation'
-CAPTION = 'Frequency of labels in the validation set'
+CAPTION = 'Frequency of labels in the validation set images'
 generate_image_frequency_table(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.VALIDATION], NAME, CAPTION,
                                pos_neg_only=True)
 
@@ -188,7 +188,7 @@ def observation_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
 
 
 NAME = 'observation-coincidence'
-CAPTION = 'Coincidence of positive observations in the training set'
+CAPTION = 'Coincidence of positive observations in the training set images'
 stats = observation_image_coincidence(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.TRAINING])
 # Remove upper triangle (same as bottom triangle) to make it easier to follow
 stats.values[np.triu_indices_from(stats, 0)] = ''
