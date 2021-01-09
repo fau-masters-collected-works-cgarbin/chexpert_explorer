@@ -23,12 +23,19 @@ import chexpert_dataset as cxd
 # Whenever possible, they match the name of the column used to group the statistics
 INDEX_NAME_SET = 'Set'
 INDEX_NAME_ITEM = 'Item'
+
 COL_COUNT = 'Count'
 COL_PERCENTAGE = '%'
-COL_PERCENTAGE_CUMULATIVE = 'Cumulative %'
+COL_PERCENTAGE_CUMULATIVE = 'Cum. %'
+COL_PERCENTAGE_PATIENTS = 'Patients %'
+COL_PERCENTAGE_IMAGES = 'Images %'
+
 PATIENTS = 'Patients'
 IMAGES = 'Images'
 STUDIES = 'Studies'
+
+
+def _pct(x): return 100 * x / x.sum()
 
 
 def _summary_stats_by_set(df: pd.DataFrame, column: str) -> pd.DataFrame:
@@ -50,7 +57,7 @@ def _add_percentage(df: pd.DataFrame, level=0, cumulative=False) -> pd.DataFrame
     # It must be a dataset in long format
     assert len(df.columns) == 1
 
-    df[COL_PERCENTAGE] = df.groupby(level=level).apply(lambda x: 100 * x / x.sum())
+    df[COL_PERCENTAGE] = df.groupby(level=level).apply(_pct)
     if(cumulative):
         df[COL_PERCENTAGE_CUMULATIVE] = df.groupby(level=level)[COL_PERCENTAGE].cumsum()
     return df
@@ -126,6 +133,31 @@ def images_per_patient(df: pd.DataFrame) -> pd.DataFrame:
     return stats
 
 
+def images_per_patient_sex(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate the number of images for each patient, split by sex.
+
+    Args:
+        df (pd.DataFrame): A CheXpert DataFrame.
+
+    Returns:
+        pd.DataFrame: Number of images each patient has for each set (training/validation), split
+            by sex.
+    """
+    # Image (view) numbers may be repeated for the same patient (they are unique only within
+    # each study), thus in this case we need the overall count and not unique count
+    stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_SEX], as_index=True,  observed=True).agg(
+        Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
+        Images=(cxd.COL_VIEW_NUMBER, 'count'))
+
+    stats[COL_PERCENTAGE_PATIENTS] = stats.groupby(level=0)[PATIENTS].apply(_pct)
+    stats[COL_PERCENTAGE_IMAGES] = stats.groupby(level=0)[IMAGES].apply(_pct)
+
+    # Adjust the column order to a logical sequence
+    stats = stats[[PATIENTS, COL_PERCENTAGE_PATIENTS, IMAGES, COL_PERCENTAGE_IMAGES]]
+
+    return stats
+
+
 def images_per_patient_binned(df: pd.DataFrame, add_percentage: bool = True) -> pd.DataFrame:
     """Get the binned number of images per patient, split by training/validation set.
 
@@ -138,18 +170,30 @@ def images_per_patient_binned(df: pd.DataFrame, add_percentage: bool = True) -> 
             observation and a multiindex to identify set and bins).
     """
     stats = images_per_patient(df)
-    bins = [0, 1, 2, 3, 10, 20, 100]
-    bin_labels = ['1 image', '2 images', '3 images', '4 to 10 images', '11 to 20 images',
-                  'More than 20 images']
-    stats[IMAGES] = pd.cut(stats.Images, bins=bins, labels=bin_labels, right=True)
-    summary = stats.reset_index().groupby([cxd.COL_TRAIN_VALIDATION, IMAGES], as_index=True,
-                                          observed=True).agg(
-        Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique))
+    bins = [0, 1, 2, 3, 4, 5, 10, 20, 30, 100]
+    bin_labels = ['1 image', '2 images', '3 images', '4 images',  '5 images', '6 to 10 images',
+                  '11 to 20 images', '21 to 30 images', 'More than 30 images']
+    NUM_IMAGES = 'Number of images'
+    stats[NUM_IMAGES] = pd.cut(stats.Images, bins=bins, labels=bin_labels, right=True)
+    group = stats.reset_index().groupby([cxd.COL_TRAIN_VALIDATION, NUM_IMAGES], as_index=True,
+                                        observed=True)
 
-    assert summary.loc[cxd.TRAINING].sum()[0] == cxd.PATIENT_NUM_TRAINING
-    assert summary.loc[cxd.VALIDATION].sum()[0] == cxd.PATIENT_NUM_VALIDATION
+    patient_summary = group.agg(Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique))
+    assert patient_summary.loc[cxd.TRAINING].sum()[0] == cxd.PATIENT_NUM_TRAINING
+    assert patient_summary.loc[cxd.VALIDATION].sum()[0] == cxd.PATIENT_NUM_VALIDATION
+    patient_summary = _add_percentage(patient_summary, level=0, cumulative=True)
 
-    summary = _add_percentage(summary, level=0, cumulative=True)
+    image_summary = group.agg(Images=(IMAGES, 'sum'))
+    assert image_summary.loc[cxd.TRAINING].sum()[0] == cxd.IMAGE_NUM_TRAINING
+    assert image_summary.loc[cxd.VALIDATION].sum()[0] == cxd.IMAGE_NUM_VALIDATION
+    image_summary = _add_percentage(image_summary, level=0, cumulative=True)
+
+    summary = patient_summary.join(image_summary, lsuffix=' ' + PATIENTS, rsuffix=' ' + IMAGES)
+
+    columns = pd.MultiIndex.from_product([[PATIENTS, IMAGES],
+                                          [COL_COUNT, COL_PERCENTAGE, COL_PERCENTAGE_CUMULATIVE]])
+    summary.columns = columns
+
     return summary
 
 
@@ -187,7 +231,7 @@ def main():
     """Test code to be invoked from the command line."""
     cxdata = cxd.CheXpertDataset()
     cxdata.fix_dataset()
-    stats = patient_study_image_count(cxdata.df)
+    stats = images_per_patient_binned(cxdata.df)
     print(stats)
 
 
