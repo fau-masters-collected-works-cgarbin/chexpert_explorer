@@ -29,6 +29,10 @@ COL_PERCENTAGE = '%'
 COL_PERCENTAGE_CUMULATIVE = 'Cum. %'
 COL_PERCENTAGE_PATIENTS = 'Patients %'
 COL_PERCENTAGE_IMAGES = 'Images %'
+COL_LABEL_POSITIVE = 'Positive'
+COL_LABEL_NEGATIVE = 'Negative'
+COL_LABEL_UNCERTAIN = 'Uncertain'
+COL_LABEL_NO_MENTION = 'No mention'
 
 PATIENTS = 'Patients'
 IMAGES = 'Images'
@@ -230,6 +234,35 @@ def images_summary_stats(df: pd.DataFrame) -> pd.DataFrame:
     stats = images_per_patient(df)
     summary = _summary_stats_by_set(stats, IMAGES)
     return summary
+
+
+def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate the number and percentage of times each observation appears in images.
+
+    Counts are split by label (positive, negative, uncertain, no mention).
+
+    Args:
+        df (pd.DataFrame): A CheXpert DataFrame.
+
+    Returns:
+        pd.DataFrame: Number and % of images with each observation.
+    """
+    observations = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
+    images_in_set = len(df[cxd.COL_VIEW_NUMBER])
+    ALL_LABELS = [cxd.LABEL_POSITIVE, cxd.LABEL_NEGATIVE, cxd.LABEL_UNCERTAIN, cxd.LABEL_NO_MENTION]
+    COL_NAMES = [COL_LABEL_POSITIVE, COL_PERCENTAGE, COL_LABEL_NEGATIVE, COL_PERCENTAGE,
+                 COL_LABEL_UNCERTAIN, COL_PERCENTAGE, COL_LABEL_NO_MENTION, COL_PERCENTAGE]
+    stats = pd.DataFrame(index=observations, columns=COL_NAMES)
+    for obs in observations:
+        count = [len(df[df[obs] == x]) for x in ALL_LABELS]
+        pct = [c*100/images_in_set for c in count]
+        # Interleave count and percentage columns
+        stats.loc[obs] = [x for t in zip(count, pct) for x in t]
+    # Sanity check: check a few columns for the number of images
+    cols_no_pct = [v for v in COL_NAMES if v != '%']
+    assert stats.loc[cxd.OBSERVATION_NO_FINDING][cols_no_pct].sum() == images_in_set
+    assert stats.loc[cxd.OBSERVATION_PATHOLOGY[1]][cols_no_pct].sum() == images_in_set
+    return stats
 
 
 def main():

@@ -102,10 +102,7 @@ patient_summary_stat = False
 if patient_summary_stat:
     NAME = 'patient-images-stats-summary'
     CAPTION = 'Summary statistics for images per patient'
-    stats = cxs.images_per_patient(df)
-    summary = stats.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True).agg(
-        Min=(IMAGES, 'min'), Max=(IMAGES, 'max'), Median=(IMAGES, 'median'), Mean=(IMAGES, 'mean'),
-        Std=(IMAGES, 'std'))
+    summary = cxs.images_summary_stats(df)
     summary.to_latex(buf=DIR_TABLES+NAME+'.tex',
                      float_format=FLOAT_FORMAT, index_names=False,
                      caption=CAPTION, label='tab:'+NAME, position='h!')
@@ -115,7 +112,7 @@ NAME = 'patient-images-stats-distribution'
 CAPTION = 'Distribution of images per patient'
 stats = cxs.images_per_patient_binned(df)
 # Simplify the table to make it look better
-# index_names=False should be even better, but it has a bug: https://github.com/pandas-dev/pandas/issues/18326
+# index_names=False should be even better, but it has a bug: https://github.com/pandas-dev/pandas/issues/18326 # noqa
 stats.index.names = [''] * stats.index.nlevels
 table = stats.to_latex(formatters=[INT_FORMAT, FLOAT_FORMAT, FLOAT_FORMAT] * 2,
                        float_format=FLOAT_FORMAT, index_names=True,
@@ -127,29 +124,10 @@ format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION,
 # Frequency of labels in the training and validation sets
 
 
-def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
-    """How many images has each observation, split by label (pos, neg, uncertain, no mention)."""
-    observations = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
-    images_in_set = len(df[cxd.COL_VIEW_NUMBER])
-    ALL_LABELS = [cxd.LABEL_POSITIVE, cxd.LABEL_NEGATIVE, cxd.LABEL_UNCERTAIN, cxd.LABEL_NO_MENTION]
-    COL_NAMES = ['Positive', '%', 'Negative', '%', 'Uncertain', '%', 'No mention', '%']
-    stats = pd.DataFrame(index=observations, columns=COL_NAMES)
-    for obs in observations:
-        count = [len(df[df[obs] == x]) for x in ALL_LABELS]
-        pct = [c*100/images_in_set for c in count]
-        # Interleave count and percentage columns
-        stats.loc[obs] = [x for t in zip(count, pct) for x in t]
-    # Sanity check: check a few columns for the number of images
-    cols_no_pct = [v for v in COL_NAMES if v != '%']
-    assert stats.loc[cxd.OBSERVATION_NO_FINDING][cols_no_pct].sum() == images_in_set
-    assert stats.loc[cxd.OBSERVATION_PATHOLOGY[1]][cols_no_pct].sum() == images_in_set
-    return stats
-
-
 def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
                                    pos_neg_only: bool = False) -> str:
     """Create the LaTeX table for label frequency per image."""
-    stats = label_image_frequency(df)
+    stats = cxs.label_image_frequency(df)
     if pos_neg_only:
         # Assume pos/neg count and % are the first columns
         stats = stats.iloc[:, :4]
@@ -204,7 +182,7 @@ format_table(table, stats, NAME, text_width=True, short_observation_name=True,
 
 
 NAME = 'demographic-by-set-sex'
-CAPTION = 'Images and patients by sex'
+CAPTION = 'Patients and images by sex'
 stats = cxs.images_per_patient_sex(df)
 # Simplify the table to make it look better
 stats.index.names = ['', cxd.COL_SEX]
@@ -218,6 +196,8 @@ CAPTION = 'Images and patients by age group'
 stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP], as_index=True, observed=True).agg(
     Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
     Images=(cxd.COL_VIEW_NUMBER, 'count'))
+# Simplify the table to make it look better
+stats.index.names = ['', cxd.COL_AGE_GROUP]
 table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!')
