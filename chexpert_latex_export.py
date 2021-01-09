@@ -179,9 +179,7 @@ format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, fon
 
 NAME = 'demographic-by-set-age-group'
 CAPTION = 'Images and patients by age group'
-stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP], as_index=True, observed=True).agg(
-    Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
-    Images=(cxd.COL_VIEW_NUMBER, 'count'))
+stats = cxs.patients_images_by_age_group(df)
 # Simplify the table to make it look better
 stats.index.names = ['', cxd.COL_AGE_GROUP]
 table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
