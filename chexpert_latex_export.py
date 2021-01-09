@@ -151,23 +151,9 @@ generate_image_frequency_table(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.VALIDATION
                                pos_neg_only=True)
 
 
-def observation_image_coincidence(df: pd.DataFrame) -> pd.DataFrame:
-    """Count how many times each observation appears with (is positive with) another observation."""
-    labels = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
-    stats = pd.DataFrame(index=labels, columns=labels)
-
-    for label in labels:
-        df_label = df[df[label] == 1]
-        coincidences = [len(df_label[df_label[other_label] == 1]) for other_label in labels]
-        stats.loc[label] = coincidences
-    # Sanity check: 'No Finding' should not coincide with a pathology
-    assert stats.loc[cxd.OBSERVATION_NO_FINDING][cxd.OBSERVATION_PATHOLOGY].sum() == 0
-    return stats
-
-
 NAME = 'observation-coincidence'
 CAPTION = 'Coincidence of positive observations in the training set images'
-stats = observation_image_coincidence(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.TRAINING])
+stats = cxs.observation_image_coincidence(df[df[cxd.COL_TRAIN_VALIDATION] == cxd.TRAINING])
 # Remove upper triangle (same as bottom triangle) to make it easier to follow
 stats.values[np.triu_indices_from(stats, 0)] = ''
 # Remove first row and last column (they are now empty)
