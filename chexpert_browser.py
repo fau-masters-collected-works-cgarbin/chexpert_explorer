@@ -53,7 +53,7 @@ st.markdown('### Binned number of images')
 summary = cxs.images_per_patient_binned(df)
 # Hack for https://github.com/streamlit/streamlit/issues/47
 summary = summary.reset_index()
-for c in [cxd.COL_TRAIN_VALIDATION, cxs.IMAGES]:
+for c in [cxd.COL_TRAIN_VALIDATION, 'Number of images']:
     summary[c] = summary[c].astype('object')
 st.write(summary)
 
