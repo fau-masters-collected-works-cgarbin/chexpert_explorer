@@ -30,7 +30,7 @@ SEP_TRAIN_VALIDATION = ['Validation']
 
 
 def format_table(table: str, source_df: pd.DataFrame, file: str,
-                 short_observation_name: bool = False, text_width: bool = False,
+                 short_observation_name: bool = False, text_width: str = None,
                  vertical_columns_names: bool = False, horizontal_separators: List[str] = None,
                  font_size: str = None):
     """Format a LaTeX table and saves it to a file.
@@ -51,9 +51,9 @@ def format_table(table: str, source_df: pd.DataFrame, file: str,
         font_size (str, optional): Set the font size to the specified font, or use the default if
             ``None`` is specified. Defaults to None.
     """
-    if text_width:
-        table = table.replace('\\begin{tabular}',
-                              '\\begin{adjustbox}{width = 1\\textwidth}\n\\begin{tabular}')
+    if text_width is not None:
+        adjustbox = '\\begin{adjustbox}{width = ' + text_width + '}\n\\begin{tabular}'
+        table = table.replace('\\begin{tabular}', adjustbox)
         table = table.replace('\\end{tabular}', '\\end{tabular}\n\\end{adjustbox}')
         table = table.replace('{table}', '{table*}')
 
@@ -118,7 +118,7 @@ table = stats.to_latex(formatters=[INT_FORMAT, FLOAT_FORMAT, FLOAT_FORMAT] * 2,
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!', multicolumn=True)
 format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION,
-             font_size='small', text_width=True)
+             font_size='small', text_width='0.75\\textwidth')
 
 
 # Frequency of labels in the training and validation sets
@@ -128,16 +128,18 @@ def generate_image_frequency_table(df: pd.DataFrame, name: str, caption: str,
                                    pos_neg_only: bool = False) -> str:
     """Create the LaTeX table for label frequency per image."""
     stats = cxs.label_image_frequency(df)
+    text_width = '0.9\\textwidth'
     if pos_neg_only:
         # Assume pos/neg count and % are the first columns
         stats = stats.iloc[:, :4]
+        text_width = None  # fits in the column, no need to adjust the size
     font_size = 'small' if pos_neg_only else 'scriptsize'
 
     table = stats.to_latex(column_format='l' + 'r' * stats.shape[1],
                            formatters=[INT_FORMAT, '{:.1%}'.format] * (stats.shape[1]//2),
                            float_format=FLOAT_FORMAT, index_names=True,
                            caption=caption, label='tab:'+name, position='h!')
-    format_table(table, stats, name, short_observation_name=True, text_width=not pos_neg_only,
+    format_table(table, stats, name, short_observation_name=True, text_width=text_width,
                  horizontal_separators=SEP_OBSERVATIONS, font_size=font_size)
 
 
@@ -163,7 +165,7 @@ stats.drop(labels=cxd.OBSERVATION_PATHOLOGY[-1], axis='columns', inplace=True)
 table = stats.to_latex(column_format='r' * (stats.shape[1]+1),  # +1 for index
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!')
-format_table(table, stats, NAME, text_width=True, short_observation_name=True,
+format_table(table, stats, NAME, text_width='1\\textwidth', short_observation_name=True,
              vertical_columns_names=True, horizontal_separators=SEP_OBSERVATIONS)
 
 
@@ -197,4 +199,4 @@ table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
                        float_format=FLOAT_FORMAT, index_names=True,
                        caption=CAPTION, label='tab:'+NAME, position='h!')
 format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, font_size='small',
-             text_width=True)
+             text_width='0.75\\textwidth')
