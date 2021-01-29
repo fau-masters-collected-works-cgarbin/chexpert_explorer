@@ -15,7 +15,7 @@ Example::
     stats = cxs.patient_study_image_count(cxdata.df)
 
 The functions take as input a DataFrame create by a CheXpertDataset class and return the requested
-statistics/summary. The DataFrame may be filtered (e.g. only the training row), as long as it has
+statistics/summary. The DataFrame may be filtered (e.g. only the training rows), as long as it has
 the same number of columns as the original CheXPertDataset DataFrame.
 
 The returned DataFrames are in long format, i.e. one observation per row.
@@ -73,7 +73,8 @@ def _add_percentage(df: pd.DataFrame, level=0, cumulative=False) -> pd.DataFrame
     return df
 
 
-def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) -> pd.DataFrame:
+def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False,
+                              filtered: bool = False) -> pd.DataFrame:
     """Calculate count of patients, studies, and images, split by training/validation set."""
     # We need a column that is unique for patient and study
     col_patient_study = 'Patient/Study'
@@ -86,9 +87,11 @@ def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) ->
         Studies=(col_patient_study, pd.Series.nunique),
         Images=(cxd.COL_VIEW_NUMBER, 'count'))
 
-    assert stats[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL
-    assert stats[STUDIES].sum() == cxd.STUDY_NUM_TOTAL
-    assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
+    # Validate against expected CheXpert number when the DataFrame is not filtered
+    if not filtered:
+        assert stats[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL
+        assert stats[STUDIES].sum() == cxd.STUDY_NUM_TOTAL
+        assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
 
     stats = pd.DataFrame(stats.stack())
     stats = stats.rename(columns={0: COL_COUNT})
@@ -142,7 +145,7 @@ def images_per_patient_sex(df: pd.DataFrame) -> pd.DataFrame:
     return stats
 
 
-def images_per_patient_binned(df: pd.DataFrame) -> pd.DataFrame:
+def images_per_patient_binned(df: pd.DataFrame, filtered: bool = False) -> pd.DataFrame:
     """Calculate the binned number of images per patient, split by training/validation set."""
     stats = images_per_patient(df)
     bins = [0, 1, 2, 3, 4, 5, 10, 20, 30, 100]
@@ -154,13 +157,15 @@ def images_per_patient_binned(df: pd.DataFrame) -> pd.DataFrame:
                                         observed=True)
 
     patient_summary = group.agg(Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique))
-    assert patient_summary.loc[cxd.TRAINING].sum()[0] == cxd.PATIENT_NUM_TRAINING
-    assert patient_summary.loc[cxd.VALIDATION].sum()[0] == cxd.PATIENT_NUM_VALIDATION
+    if not filtered:
+        assert patient_summary.loc[cxd.TRAINING].sum()[0] == cxd.PATIENT_NUM_TRAINING
+        assert patient_summary.loc[cxd.VALIDATION].sum()[0] == cxd.PATIENT_NUM_VALIDATION
     patient_summary = _add_percentage(patient_summary, level=0, cumulative=True)
 
     image_summary = group.agg(Images=(IMAGES, 'sum'))
-    assert image_summary.loc[cxd.TRAINING].sum()[0] == cxd.IMAGE_NUM_TRAINING
-    assert image_summary.loc[cxd.VALIDATION].sum()[0] == cxd.IMAGE_NUM_VALIDATION
+    if not filtered:
+        assert image_summary.loc[cxd.TRAINING].sum()[0] == cxd.IMAGE_NUM_TRAINING
+        assert image_summary.loc[cxd.VALIDATION].sum()[0] == cxd.IMAGE_NUM_VALIDATION
     image_summary = _add_percentage(image_summary, level=0, cumulative=True)
 
     summary = patient_summary.join(image_summary, lsuffix=' ' + PATIENTS, rsuffix=' ' + IMAGES)

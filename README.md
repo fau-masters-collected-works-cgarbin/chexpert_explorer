@@ -6,9 +6,9 @@ A preprocessor and explorer for [CheXPert](https://stanfordmlgroup.github.io/com
   (Excel, Google Sheets, etc.).
 - Explorer: filters and explores the composition of the dataset.
 
-## Preparing to use the tools
+## Preparing the environment
 
-If this is the first time you are using the preprocessor and the visualizer, follow
+If this is the first time you are using the preprocessor and the explorer, follow
 [the setup instructions](./setup.md) to prepare the environment.
 
 ## Preprocessing the dataset
