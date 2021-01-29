@@ -237,7 +237,7 @@ class CheXpertDataset:
 
 
 def main():
-    """Separate main function to follow conventions and docstring to make pylint happy."""
+    """Entrypoint to test this file from the command line."""
     chexpert = CheXpertDataset()
     chexpert.fix_dataset()
     print(chexpert.df.to_csv(index=False))

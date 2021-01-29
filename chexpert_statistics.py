@@ -68,7 +68,7 @@ def _add_percentage(df: pd.DataFrame, level=0, cumulative=False) -> pd.DataFrame
     assert len(df.columns) == 1
 
     df[COL_PERCENTAGE] = df.groupby(level=level).apply(_pct)
-    if(cumulative):
+    if cumulative:
         df[COL_PERCENTAGE_CUMULATIVE] = df.groupby(level=level)[COL_PERCENTAGE].cumsum()
     return df
 
@@ -76,14 +76,14 @@ def _add_percentage(df: pd.DataFrame, level=0, cumulative=False) -> pd.DataFrame
 def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) -> pd.DataFrame:
     """Calculate count of patients, studies, and images, split by training/validation set."""
     # We need a column that is unique for patient and study
-    COL_PATIENT_STUDY = 'Patient/Study'
+    col_patient_study = 'Patient/Study'
     df = df.copy()  # preserve the caller's data
-    df[COL_PATIENT_STUDY] = ['{}-{}'.format(p, s) for p, s in
+    df[col_patient_study] = ['{}-{}'.format(p, s) for p, s in
                              zip(df[cxd.COL_PATIENT_ID], df[cxd.COL_STUDY_NUMBER])]
 
     stats = df.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
         Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
-        Studies=(COL_PATIENT_STUDY, pd.Series.nunique),
+        Studies=(col_patient_study, pd.Series.nunique),
         Images=(cxd.COL_VIEW_NUMBER, 'count'))
 
     assert stats[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL
@@ -101,7 +101,7 @@ def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False) ->
 
 
 def studies_per_patient(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate the number of studies for each patient. """
+    """Calculate the number of studies for each patient."""
     # The same study number may shows up more than once for the same patient (a study that has
     # more than one image), thus we need the unique count of studies in this case
     stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_PATIENT_ID], as_index=True,
@@ -124,7 +124,7 @@ def images_per_patient_sex(df: pd.DataFrame) -> pd.DataFrame:
     """Calculate the number of images for each patient, split by sex."""
     # Image (view) numbers may be repeated for the same patient (they are unique only within
     # each study), thus in this case we need the overall count and not unique count
-    stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_SEX], as_index=True,  observed=True).agg(
+    stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_SEX], as_index=True, observed=True).agg(
         Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
         Images=(cxd.COL_VIEW_NUMBER, 'count'))
 
@@ -142,15 +142,15 @@ def images_per_patient_sex(df: pd.DataFrame) -> pd.DataFrame:
     return stats
 
 
-def images_per_patient_binned(df: pd.DataFrame, add_percentage: bool = True) -> pd.DataFrame:
+def images_per_patient_binned(df: pd.DataFrame) -> pd.DataFrame:
     """Calculate the binned number of images per patient, split by training/validation set."""
     stats = images_per_patient(df)
     bins = [0, 1, 2, 3, 4, 5, 10, 20, 30, 100]
-    bin_labels = ['1 image', '2 images', '3 images', '4 images',  '5 images', '6 to 10 images',
+    bin_labels = ['1 image', '2 images', '3 images', '4 images', '5 images', '6 to 10 images',
                   '11 to 20 images', '21 to 30 images', 'More than 30 images']
-    NUM_IMAGES = 'Number of images'
-    stats[NUM_IMAGES] = pd.cut(stats.Images, bins=bins, labels=bin_labels, right=True)
-    group = stats.reset_index().groupby([cxd.COL_TRAIN_VALIDATION, NUM_IMAGES], as_index=True,
+    num_images = 'Number of images'
+    stats[num_images] = pd.cut(stats.Images, bins=bins, labels=bin_labels, right=True)
+    group = stats.reset_index().groupby([cxd.COL_TRAIN_VALIDATION, num_images], as_index=True,
                                         observed=True)
 
     patient_summary = group.agg(Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique))
@@ -190,17 +190,17 @@ def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
     """Calculate the number and percentage of times each observation appears in images."""
     observations = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
     images_in_set = len(df[cxd.COL_VIEW_NUMBER])
-    ALL_LABELS = [cxd.LABEL_POSITIVE, cxd.LABEL_NEGATIVE, cxd.LABEL_UNCERTAIN, cxd.LABEL_NO_MENTION]
-    COL_NAMES = [COL_LABEL_POSITIVE, COL_PERCENTAGE, COL_LABEL_NEGATIVE, COL_PERCENTAGE,
+    all_labels = [cxd.LABEL_POSITIVE, cxd.LABEL_NEGATIVE, cxd.LABEL_UNCERTAIN, cxd.LABEL_NO_MENTION]
+    col_names = [COL_LABEL_POSITIVE, COL_PERCENTAGE, COL_LABEL_NEGATIVE, COL_PERCENTAGE,
                  COL_LABEL_UNCERTAIN, COL_PERCENTAGE, COL_LABEL_NO_MENTION, COL_PERCENTAGE]
-    stats = pd.DataFrame(index=observations, columns=COL_NAMES)
+    stats = pd.DataFrame(index=observations, columns=col_names)
     for obs in observations:
-        count = [len(df[df[obs] == x]) for x in ALL_LABELS]
+        count = [len(df[df[obs] == x]) for x in all_labels]
         pct = [c*100/images_in_set for c in count]
         # Interleave count and percentage columns
         stats.loc[obs] = [x for t in zip(count, pct) for x in t]
     # Sanity check: check a few columns for the number of images
-    cols_no_pct = [v for v in COL_NAMES if v != '%']
+    cols_no_pct = [v for v in col_names if v != '%']
     assert stats.loc[cxd.OBSERVATION_NO_FINDING][cols_no_pct].sum() == images_in_set
     assert stats.loc[cxd.OBSERVATION_PATHOLOGY[1]][cols_no_pct].sum() == images_in_set
     return stats
