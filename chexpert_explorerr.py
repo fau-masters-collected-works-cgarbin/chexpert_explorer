@@ -116,7 +116,8 @@ else:
     st.write(stats)
 
     st.markdown('### Number of patients and images by age group')
-    stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP], as_index=True, observed=True).agg(
+    stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP],
+                       as_index=True, observed=True).agg(
         Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
         Images=(cxd.COL_VIEW_NUMBER, 'count'))
     st.write(stats)
