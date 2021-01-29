@@ -72,8 +72,10 @@ for obs in adjusted_observations:
 if df.shape[0] == 0:
     st.write('There are no images with this combination of observations')
 else:
+    filtered = df.shape[0] != df_complete.shape[0]
+
     st.markdown('## Number of patients, studies, and images')
-    stats = cxs.patient_study_image_count(df, filtered=True)
+    stats = cxs.patient_study_image_count(df, filtered=filtered)
     # Long format, without the "Counts" column index
     stats = stats.unstack().reorder_levels([1, 0], axis='columns').droplevel(1, axis='columns')
     st.write(stats)
@@ -100,7 +102,7 @@ else:
     st.write(summary.unstack().reset_index())
 
     st.markdown('### Binned number of images')
-    summary = cxs.images_per_patient_binned(df, filtered=True)
+    summary = cxs.images_per_patient_binned(df, filtered=filtered)
     # Hack for https://github.com/streamlit/streamlit/issues/47
     summary = summary.reset_index()
     for c in [cxd.COL_TRAIN_VALIDATION, 'Number of images']:
