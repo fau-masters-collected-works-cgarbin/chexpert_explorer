@@ -1,10 +1,10 @@
 # CheXpert preprocessing and visualization
 
-A preprocessor and visualizer for [CheXPert](https://stanfordmlgroup.github.io/competitions/chexpert/).
+A preprocessor and explorer for [CheXPert](https://stanfordmlgroup.github.io/competitions/chexpert/).
 
 - Preprocessing: creates a single .csv suitable to explore the dataset with spreadsheet applications
   (Excel, Google Sheets, etc.).
-- Visualizer: explores the images in the dataset.
+- Explorer: filters and explores the composition of the dataset.
 
 ## Preparing to use the tools
 
@@ -32,6 +32,12 @@ How to preprocess the dataset:
 1. Run ... TBD
 2. Open the .csv file in your favority spreadsheet application.
 
-## Visualizing the dataset
+## Exploring the dataset
 
-TBD
+Run [Streamlit](https://www.streamlit.io/) to explore the dataset.
+
+`streamlit run chexpert_browser.py`
+
+Streamlit opens a web page where you can select fitlers to explore the dataset.
+
+The dataset is large. Applying some of the filters may take several seconds.

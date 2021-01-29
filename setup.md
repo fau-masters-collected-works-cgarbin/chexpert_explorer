@@ -1,11 +1,10 @@
 # Preparing to use the tools
 
-Before using the preprocessor and the visualizer for the first time you need to:
+Before using the preprocessor and the visualizer for the first time you need to perform these steps,
+described in the following sections.
 
-1. Download the dataset
-1. Prepare the Python environment
-
-Follow the directions in the next sections to put that in place. They have to be done only once.
+- Download the dataset
+- Prepare the Python environment
 
 ## Download the dataset
 
