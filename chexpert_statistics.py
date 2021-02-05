@@ -193,8 +193,8 @@ def images_summary_stats(df: pd.DataFrame) -> pd.DataFrame:
 
 def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
     """Calculate the number and percentage of times each observation appears in images."""
-    observations = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
     images_in_set = len(df[cxd.COL_VIEW_NUMBER])
+    observations = cxd.OBSERVATION_OTHER + cxd.OBSERVATION_PATHOLOGY
     all_labels = [cxd.LABEL_POSITIVE, cxd.LABEL_NEGATIVE, cxd.LABEL_UNCERTAIN, cxd.LABEL_NO_MENTION]
     col_names = [COL_LABEL_POSITIVE, COL_PERCENTAGE, COL_LABEL_NEGATIVE, COL_PERCENTAGE,
                  COL_LABEL_UNCERTAIN, COL_PERCENTAGE, COL_LABEL_NO_MENTION, COL_PERCENTAGE]
@@ -247,7 +247,7 @@ def main():
     """Test code to be invoked from the command line."""
     cxdata = cxd.CheXpertDataset()
     cxdata.fix_dataset()
-    stats = patients_images_by_sex_age_group(cxdata.df)
+    stats = label_image_frequency(cxdata.df)
     print(stats)
 
 

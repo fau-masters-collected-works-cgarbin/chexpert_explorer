@@ -109,7 +109,7 @@ if patient_summary_stat:
 
 # Binned number of images per patient (continuing from above, where the number of images was added)
 NAME = 'patient-images-stats-distribution'
-CAPTION = 'Distribution of images per patient'
+CAPTION = 'Distribution of number of images per patient'
 stats = cxs.images_per_patient_binned(df)
 # Simplify the table to make it look better
 # index_names=False should be even better, but it has a bug: https://github.com/pandas-dev/pandas/issues/18326 # noqa
