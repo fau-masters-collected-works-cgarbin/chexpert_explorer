@@ -2,9 +2,12 @@
 
 A preprocessor and explorer for [CheXPert](https://stanfordmlgroup.github.io/competitions/chexpert/).
 
-- Preprocessing: creates a single .csv suitable to explore the dataset with spreadsheet applications
-  (Excel, Google Sheets, etc.).
-- Explorer: filters and explores the composition of the dataset.
+- Preprocessing: parses the .csv files that describe the dataset and augments it with more granular
+  information. Results are stored as a Pandas DataFrame for easy filtering and summarization.
+- Explorer: filters and explores the composition of the dataset by finding, using [Streamlit](https://www.streamlit.io/).
+- Statistics generation: generates Pandas tables with different cross-sectional views into the dataset.
+- LaTeX exporter: exports tables in LaTeX format. Used to populate the tables in the CheXpert
+  datasheet programmatically.
 
 ## Preparing the environment
 
@@ -21,23 +24,69 @@ validation set).
 Preprocessing the dataset makes it easier to explore it with spreadsheet applications, e.g. create
 filters, pivot tables, and graphs.
 
-The preprocessor creates one .csv file that combines the train.csv and valid.csv files. Compared to
-the original dataset files, the combined file has:
+The preprocessor creates a Pandas DataFrame that combines the training and validation .csv files,
+augmenting them with more granular data.
 
-- One column to indicate if the image is from the training or validation set.
-- Labels normalized to integers.
+To use it in code:
 
-How to preprocess the dataset:
+```python
+import chexpert_dataset as cxd
 
-1. Run ... TBD
-2. Open the .csv file in your favority spreadsheet application.
+cxdata = cxd.CheXpertDataset()
 
-## Exploring the dataset
+# Optionally, fix a few minor items in the dataset
+cxdata.fix_dataset()
 
-Run [Streamlit](https://www.streamlit.io/) to explore the dataset.
+# Get the Pandas DataFrame
+df = cxdata.df
+```
 
-`streamlit run chexpert_browser.py`
+To export the preprocessed data as CSV:
 
-Streamlit opens a web page where you can select fitlers to explore the dataset.
+```bash
+python3 chexpert_dataset.py
+```
+
+## Exploring the dataset by finding
+
+Run [Streamlit](https://www.streamlit.io/) to explore the dataset by finding.
+
+`streamlit run chexpert_explorer.py`
+
+Streamlit opens a web page where you can select filters to explore the dataset.
 
 The dataset is large. Applying some of the filters may take several seconds.
+
+## Statistics generation
+
+Use in combination with the dataset preprocessor to get cross-sectional and summary statistics for
+the dataset.
+
+```python
+import chexpert_dataset as cxd
+import chexpert_statistics as cxs
+
+chexpert = cxd.CheXpertDataset()
+chexpert.fix_dataset()
+# Make code a bit simpler
+df = chexpert.df
+
+# Count of patients and images in the training and validation datasets
+stats = cxs.patient_study_image_count(df)
+stats = stats.unstack().droplevel(0, axis='columns')
+```
+
+## LaTeX exporter
+
+Exports the dataset summary and cross-sectional statistics as LaTeX tables.
+
+Used to create tables for the datasheet paper programmatically, reducing the chance of errors.
+
+NOTE: a variable at the top of the file defines the path to export the tables to. Adjust it as
+needed for your environment.
+
+To generate the tables:
+
+```bash
+python3 chexpert_latex_export.py
+```

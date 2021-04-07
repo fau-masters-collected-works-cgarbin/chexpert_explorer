@@ -15,8 +15,8 @@ import chexpert_dataset as cxd
 import chexpert_statistics as cxs
 
 # Destination directories, with path separator at the end to simplify the code
+# IMPORTANT: assumes a specific path - adjust for your environment
 DIR_TABLES = os.path.join('..', 'chexpert-datasheet', 'tables') + os.sep
-DIR_GRAPHS = os.path.join('..', 'chexpert-datasheet', 'graphs') + os.sep
 
 IMAGES = 'Images'
 PATIENTS = 'Patients'
@@ -180,7 +180,7 @@ table = stats.to_latex(formatters=[INT_FORMAT, FLOAT_FORMAT] * (stats.shape[1]//
 format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, font_size='small')
 
 NAME = 'demographic-by-set-age-group'
-CAPTION = 'Images and patients by age group'
+CAPTION = 'Patients and images by age group'
 stats = cxs.patients_images_by_age_group(df)
 # Simplify the table to make it look better
 stats.index.names = ['', cxd.COL_AGE_GROUP]
@@ -190,7 +190,7 @@ table = stats.to_latex(formatters=[INT_FORMAT] * stats.shape[1],
 format_table(table, stats, NAME, horizontal_separators=SEP_TRAIN_VALIDATION, font_size='small')
 
 NAME = 'demographic-by-set-sex-age-group'
-CAPTION = 'Images and patients by sex and age group'
+CAPTION = 'Patients and images by sex and age group'
 stats = cxs.patients_images_by_sex_age_group(df)
 stats = stats.unstack(fill_value=0)
 # Simplify the table to make it look better
