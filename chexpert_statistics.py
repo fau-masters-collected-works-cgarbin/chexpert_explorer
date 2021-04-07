@@ -205,9 +205,9 @@ def label_image_frequency(df: pd.DataFrame) -> pd.DataFrame:
         # Interleave count and percentage columns
         stats.loc[obs] = [x for t in zip(count, pct) for x in t]
     # Sanity check: check a few columns for the number of images
-    cols_no_pct = [v for v in col_names if v != '%']
-    assert stats.loc[cxd.OBSERVATION_NO_FINDING][cols_no_pct].sum() == images_in_set
-    assert stats.loc[cxd.OBSERVATION_PATHOLOGY[1]][cols_no_pct].sum() == images_in_set
+    cols_with_counts = [v for v in col_names if v != '%']
+    assert stats.loc[cxd.OBSERVATION_NO_FINDING][cols_with_counts].sum() == images_in_set
+    assert stats.loc[cxd.OBSERVATION_PATHOLOGY[1]][cols_with_counts].sum() == images_in_set
     return stats
 
 
