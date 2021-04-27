@@ -31,10 +31,14 @@ INDEX_NAME_SET = 'Set'
 INDEX_NAME_ITEM = 'Item'
 
 COL_COUNT = 'Count'
+COL_PATIENT_STUDY = 'Patient/Study'
+COL_AGED = 'Aged'
+
 COL_PERCENTAGE = '%'
 COL_PERCENTAGE_CUMULATIVE = 'Cum. %'
 COL_PERCENTAGE_PATIENTS = 'Patients %'
 COL_PERCENTAGE_IMAGES = 'Images %'
+
 COL_LABEL_POSITIVE = 'Positive'
 COL_LABEL_NEGATIVE = 'Negative'
 COL_LABEL_UNCERTAIN = 'Uncertain'
@@ -73,18 +77,22 @@ def _add_percentage(df: pd.DataFrame, level=0, cumulative=False) -> pd.DataFrame
     return df
 
 
+def _add_aux_patient_study_column(df: pd.DataFrame) -> pd.DataFrame:
+    """Add a column that is unique for patient/study to help with grouping and counting."""
+    df = df.copy()  # preserve the caller's data
+    df[COL_PATIENT_STUDY] = ['{}-{}'.format(p, s) for p, s in
+                             zip(df[cxd.COL_PATIENT_ID], df[cxd.COL_STUDY_NUMBER])]
+    return df
+
+
 def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False,
                               filtered: bool = False) -> pd.DataFrame:
     """Calculate count of patients, studies, and images, split by training/validation set."""
-    # We need a column that is unique for patient and study
-    col_patient_study = 'Patient/Study'
-    df = df.copy()  # preserve the caller's data
-    df[col_patient_study] = ['{}-{}'.format(p, s) for p, s in
-                             zip(df[cxd.COL_PATIENT_ID], df[cxd.COL_STUDY_NUMBER])]
+    df = _add_aux_patient_study_column(df)
 
     stats = df.groupby([cxd.COL_TRAIN_VALIDATION], as_index=True, observed=True).agg(
         Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
-        Studies=(col_patient_study, pd.Series.nunique),
+        Studies=(COL_PATIENT_STUDY, pd.Series.nunique),
         Images=(cxd.COL_VIEW_NUMBER, 'count'))
 
     # Validate against expected CheXpert number when the DataFrame is not filtered
@@ -240,14 +248,59 @@ def patients_images_by_sex_age_group(df: pd.DataFrame) -> pd.DataFrame:
                        observed=True).agg(
         Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
         Images=(cxd.COL_VIEW_NUMBER, 'count'))
+
+    assert stats[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL_BY_AGE_GROUP
+    assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
+
     return stats
+
+
+def patients_studies_images_by_sex_age_group(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate number of patients and images by sex and age group."""
+    df = _add_aux_patient_study_column(df)
+    stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP, cxd.COL_SEX], as_index=True,
+                       observed=True).agg(
+        Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique),
+        Studies=(COL_PATIENT_STUDY, pd.Series.nunique),
+        Images=(cxd.COL_VIEW_NUMBER, 'count'))
+
+    assert stats[PATIENTS].sum() == cxd.PATIENT_NUM_TOTAL_BY_AGE_GROUP
+    assert stats[STUDIES].sum() == cxd.STUDY_NUM_TOTAL
+    assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
+
+    return stats
+
+
+def aged_patients(df: pd.DataFrame) -> pd.DataFrame:
+    """List of patients that aged during the timeframe of the dataset.
+
+    Aged patients are the ones that have studies at different ages that cross age groups. This
+    explains why when we group the dataset by age group and count the number of patients we end up
+    with more patients than when we count only by patient ID. An aged patient will have multiple
+    rows when we group by "patient ID + age group".
+    """
+    # The same study number may shows up more than once for the same patient (a study that has
+    # more than one image), thus we need the unique count of studies in this case
+    stats = df.groupby([cxd.COL_PATIENT_ID, cxd.COL_AGE_GROUP], as_index=False,
+                       observed=True).agg(
+        Studies=(cxd.COL_STUDY_NUMBER, pd.Series.nunique))
+    stats[COL_AGED] = stats[cxd.COL_PATIENT_ID].diff().eq(0)
+
+    # Number of patients when we count their age groups separately
+    # print(stats.shape[0])
+    # Difference between the number above and the count of patients without considering age groups
+    # print(stats.shape[0] - cxd.PATIENT_NUM_TOTAL)
+    # One of the patients (that crossed multiple age groups)
+    # print(df[df[cxd.COL_PATIENT_ID] == 23])
+
+    return stats[stats[COL_AGED]]
 
 
 def main():
     """Test code to be invoked from the command line."""
     cxdata = cxd.CheXpertDataset()
     cxdata.fix_dataset()
-    stats = label_image_frequency(cxdata.df)
+    stats = patients_studies_images_by_sex_age_group(cxdata.df)
     print(stats)
 
 

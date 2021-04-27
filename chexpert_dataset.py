@@ -42,6 +42,13 @@ IMAGE_NUM_TRAINING = 223_414
 IMAGE_NUM_VALIDATION = 234
 IMAGE_NUM_TOTAL = IMAGE_NUM_VALIDATION + IMAGE_NUM_TRAINING
 
+# Number of unique combinations of "patient id/age group"
+# This number is larger than the number of patients because some patients have studies over multiple
+# years, crossing age group - if we group by age group we need to take this into account when
+# checking the consistency of the datasets we are working with
+# See how it was calcuated in chexpert_statistics.py
+PATIENT_NUM_TOTAL_BY_AGE_GROUP = 66_366
+
 # Labels as used in the DataFrame
 LABEL_POSITIVE = 1
 LABEL_NEGATIVE = 0
