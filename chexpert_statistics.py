@@ -256,7 +256,7 @@ def patients_images_by_sex_age_group(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def patients_studies_images_by_sex_age_group(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate number of patients and images by sex and age group."""
+    """Calculate number of patients, studies and images by sex and age group."""
     df = _add_aux_patient_study_column(df)
     stats = df.groupby([cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP, cxd.COL_SEX], as_index=True,
                        observed=True).agg(
@@ -268,6 +268,39 @@ def patients_studies_images_by_sex_age_group(df: pd.DataFrame) -> pd.DataFrame:
     assert stats[STUDIES].sum() == cxd.STUDY_NUM_TOTAL
     assert stats[IMAGES].sum() == cxd.IMAGE_NUM_TOTAL
 
+    return stats
+
+
+def patients_studies_images_by_sex_age_group_subtotal(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate number of patients, studies and images by sex and age group.
+
+    This is the same data as the function above, adding subtotals for each category. The table is
+    already in wide format because of the subtotal columns.
+    """
+    # We rely on the logic to build subgroups above
+    # We call that function just to check if the logic is correct, via the "assert" lines there
+    patients_studies_images_by_sex_age_group(df)
+
+    df = _add_aux_patient_study_column(df)
+    cols = [cxd.COL_TRAIN_VALIDATION, cxd.COL_AGE_GROUP, cxd.COL_SEX]
+    sum_index = ('',  'All')
+
+    patients = df.groupby(cols, as_index=True, observed=True).agg(
+        Patients=(cxd.COL_PATIENT_ID, pd.Series.nunique))
+    patients = patients.unstack(fill_value=0)
+    patients[sum_index] = patients.sum(axis=1)
+
+    studies = df.groupby(cols, as_index=True, observed=True).agg(
+        Studies=(COL_PATIENT_STUDY, pd.Series.nunique))
+    studies = studies.unstack(fill_value=0)
+    studies[sum_index] = studies.sum(axis=1)
+
+    images = df.groupby(cols, as_index=True, observed=True).agg(
+        Images=(cxd.COL_VIEW_NUMBER, 'count'))
+    images = images.unstack(fill_value=0)
+    images[sum_index] = images.sum(axis=1)
+
+    stats = pd.concat([patients, studies, images], axis=1)
     return stats
 
 
@@ -300,7 +333,7 @@ def main():
     """Test code to be invoked from the command line."""
     cxdata = cxd.CheXpertDataset()
     cxdata.fix_dataset()
-    stats = patients_studies_images_by_sex_age_group(cxdata.df)
+    stats = patients_studies_images_by_sex_age_group_subtotal(cxdata.df)
     print(stats)
 
 
