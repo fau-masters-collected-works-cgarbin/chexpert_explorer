@@ -1,13 +1,10 @@
-"""Make it easier to work with the CheXpert dataset.
+"""Make it easier to work with the CheXpert .csv files.
 
-- Combine the training and validation sets into one DataFrame.
-- Create explicit columns for patient ID, study nubmer, and view number, instead of enconding in
-  the path.
-- Add a column for age groups to help  cross-sectional analysis.
+- Create explicit columns for patient ID, study nubmer, and view number, extracted from the file paths.
 - Adjust the column data types to reduce memory usage.
-- The "no mention" encoded as an empty string in the validation set is converted to an integer.
-  label for consistency and also to allow converting the columns to an integer, saving memory.
-- Add functions that compute statistics, e.g. number of images per patient.
+- Add a column for age groups to help  cross-sectional analysis.
+- Labels are encoded as integers, including the "no mention" (encoded as an empty string in the validation
+  set is converted for consistency.
 
 Using from the command line: ``python3 -m preprocess > chexpert.csv``
 
