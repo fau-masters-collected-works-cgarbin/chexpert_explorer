@@ -17,8 +17,8 @@ that simplifies exploring and filtering the dataset.
 - Create explicit columns for patient ID, study number, and view number, extracted from the file paths.
 - Adjust the column data types to reduce memory usage.
 - Add a column for age groups to help cross-sectional analysis.
-- Labels are encoded as integers, including the "no mention" (encoded as an empty string in the validation
-  set is converted for consistency.
+- Labels are encoded as integers, including the "no mention" label (encoded as an empty string in the validation
+  set).
 
 Once we have the dataset in this format, we can use Pandas and NumPy to extract statistics. The module
 `chexpert_statistics.py` has several functions already in place.
