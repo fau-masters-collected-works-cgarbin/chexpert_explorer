@@ -319,21 +319,30 @@ def aged_patients(df: pd.DataFrame) -> pd.DataFrame:
         Studies=(cxd.COL_STUDY_NUMBER, pd.Series.nunique))
     stats[COL_AGED] = stats[cxd.COL_PATIENT_ID].diff().eq(0)
 
-    # Number of patients when we count their age groups separately
-    # print(stats.shape[0])
-    # Difference between the number above and the count of patients without considering age groups
-    # print(stats.shape[0] - cxd.PATIENT_NUM_TOTAL)
+    aged = stats[stats[COL_AGED]]
+    aged_ids = aged[cxd.COL_PATIENT_ID].unique()
+
+    df_aged = df[df[cxd.COL_PATIENT_ID].isin(aged_ids)]
+    assert df_aged[cxd.COL_PATIENT_ID].unique().shape[0] == aged_ids.shape[0]
+
+    # Number of patients who span multiple age groups
+    # print(aged_ids.shape[0])
+    # Number of images for for these patients
+    # print(df_aged.shape[0])
     # One of the patients (that crossed multiple age groups)
     # print(df[df[cxd.COL_PATIENT_ID] == 23])
 
-    return stats[stats[COL_AGED]]
+    return df_aged
 
 
 def main():
     """Test code to be invoked from the command line."""
     cxdata = cxd.CheXpertDataset()
     cxdata.fix_dataset()
-    stats = patients_studies_images_by_sex_age_group_subtotal(cxdata.df)
+    stats = aged_patients(cxdata.df)
+    stats = stats.groupby([cxd.COL_PATIENT_ID, cxd.COL_AGE], as_index=False,
+                          observed=True).agg(
+        Images=(cxd.COL_VIEW_NUMBER, 'count'))
     print(stats)
 
 
