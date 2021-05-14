@@ -90,7 +90,6 @@ and summarizing the dataset we are not making a mistake that results in incorrec
 For example, the function used in the sample code is protected with `assert` statements
 as shown below.
 
-
 ```python
 def patient_study_image_count(df: pd.DataFrame, add_percentage: bool = False,
                               filtered: bool = False) -> pd.DataFrame:

@@ -1,10 +1,11 @@
 """Make it easier to work with the CheXpert .csv files.
 
-- Create explicit columns for patient ID, study nubmer, and view number, extracted from the file paths.
+- Create explicit columns for patient ID, study nubmer, and view number, extracted from the file
+  paths.
 - Adjust the column data types to reduce memory usage.
 - Add a column for age groups to help  cross-sectional analysis.
-- Labels are encoded as integers, including the "no mention" (encoded as an empty string in the validation
-  set is converted for consistency.
+- Labels are encoded as integers, including the "no mention" (encoded as an empty string in the
+  validation set is converted for consistency.
 
 Using from the command line: ``python3 -m preprocess > chexpert.csv``
 
