@@ -14,12 +14,13 @@ it into this project's folder.
 
 1. Go to the [CheXPert page](https://stanfordmlgroup.github.io/competitions/chexpert/) and request
    the dataset (scroll to the bottom of that page).
+1. Clone this repository, if you haven't done so yet.
 1. Download the .zip file and uncompress it inside the main directory of this project.
 
 Once you are done you should have a directory strcuture that looks like this:
 
 ```text
-   This project's main directory
+   This repository's main directory on your computer
     |- README.md (this file)
     |- ... other project files and folders
     +- CheXpert-v1.0-small
