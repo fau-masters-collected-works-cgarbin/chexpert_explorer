@@ -39,4 +39,5 @@ Once you are done you should have a directory strcuture that looks like this:
 - Create a Python [environment](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment):
   `python3 -m venv env`
 - Activate the environmnet: `source env/bin/activate` (Linux/Mac) or `.\env\Scripts\activate` (Windows)
+- Upgrade pip: `python -m pip install --upgrade pip`
 - Install the Python packages: `pip install -r requirements.txt`
