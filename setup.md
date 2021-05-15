@@ -22,7 +22,7 @@ Once you are done you should have a directory strcuture that looks like this:
 ```text
    This repository's main directory on your computer
     |- README.md
-    |- ... other from this repository
+    |- ... other files from this repository
     +- CheXpert-v1.0-small
        |- train.csv
        |- valid.csv
