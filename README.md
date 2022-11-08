@@ -43,13 +43,15 @@ print(stats)
 
 ## Visual exploration with Streamlit
 
-Run [Streamlit](https://www.streamlit.io/) to explore the dataset by finding.
+Run [Streamlit](https://www.streamlit.io/) to explore the dataset by finding (disease).
 
 `streamlit run chexpert_explorer.py`
 
-Streamlit opens a web page where you can select filters to explore the dataset.
+Streamlit opens a web page where you can select filters to explore the dataset. It shows several tables with summary statistics. These tables are similar to the ones used in the [CheXpert datasheet](https://arxiv.org/abs/2105.03020).
 
-The dataset is large. Applying some of the filters may take several seconds.
+Note that the dataset is large. Applying some of the filters may take several seconds.
+
+![Streamlit example](./streamlit-example.png)
 
 ## LaTeX exporter
 
