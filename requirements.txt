@@ -6,4 +6,4 @@ pandas~=1.1
 imagesize~=1.2
 
 seaborn~=0.11
-streamlit~=0.73
+streamlit~=1.14
